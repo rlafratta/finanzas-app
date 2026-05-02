@@ -324,7 +324,7 @@ setTimeout(function(){
             <div class="cs-d" id="cs-concepto-d" tabindex="0">Selecciona un concepto...</div>
             <span class="cs-arr">&#9660;</span>
             <div class="cs-drop" id="cs-concepto-drop">
-              <div class="cs-sb"><input type="text" id="cs-concepto-q" placeholder="Buscar..." autocomplete="off"></div>
+              <div class="cs-sb"><input type="text" id="cs-concepto-q" placeholder="Buscar..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="search"></div>
               <div id="cs-concepto-opts"></div>
             </div>
           </div>
@@ -379,7 +379,7 @@ setTimeout(function(){
         </div>
       </div>
       <!-- ME Panel -->
-      <div class="card" id="sub-me" style="display:none;border-color:rgba(6,182,212,.3)">
+      <div class="card" id="sub-me" style="border-color:rgba(6,182,212,.3)">
         <div class="card-hd" style="color:var(--cyan)">Moneda Extranjera</div>
         <div class="row2">
           <div class="field"><label>Divisa</label>
@@ -400,7 +400,7 @@ setTimeout(function(){
         <div class="fx-res vis" id="me-res" style="display:none"></div>
       </div>
       <!-- FCI Panel -->
-      <div class="card" id="sub-fci" style="display:none;border-color:rgba(168,85,247,.3)">
+      <div class="card" id="sub-fci" style="border-color:rgba(168,85,247,.3)">
         <div class="card-hd" style="color:var(--purple)">Fondo de Inversion</div>
         <div class="field"><label>Fondo / Entidad</label>
           <input type="text" id="fci-fondo" placeholder="Ej: Galicia Ahorro, Balanz Capital...">
@@ -417,7 +417,7 @@ setTimeout(function(){
         <div class="fx-res vis" id="fci-res" style="display:none"></div>
       </div>
       <!-- IOL Panel -->
-      <div class="card" id="sub-iol" style="display:none;border-color:rgba(245,158,11,.3)">
+      <div class="card" id="sub-iol" style="border-color:rgba(245,158,11,.3)">
         <div class="card-hd" style="color:var(--gold)">Inversion IOL / Criptos</div>
         <div class="row2">
           <div class="field"><label>Tipo</label>
@@ -1255,7 +1255,16 @@ function buildCS(id, itemsFn, onSel, withBadge) {
         render('');
         drop.classList.add('open');
         newDisp.classList.add('open');
-        if (qEl) { qEl.value = ''; setTimeout(function(){qEl.focus();},40); }
+        if (qEl) {
+          qEl.value = '';
+          // iOS Safari requires explicit user gesture for keyboard
+          qEl.removeAttribute('readonly');
+          qEl.setAttribute('autocomplete','off');
+          setTimeout(function(){
+            qEl.focus();
+            qEl.click();
+          },50);
+        }
       }
     };
   }
@@ -1279,6 +1288,13 @@ function initCarga() {
   var ej = S.ejercicios && S.ejercicios.filter(function(e){return e.id===S.activeEj;})[0];
   var sub = document.getElementById('carga-sub');
   if (sub) sub.textContent = ej ? 'Ejercicio ' + ej.year + (ej.desc ? ' - ' + ej.desc : '') : 'Sin ejercicio activo';
+  // Reset concept display
+  var csd = document.getElementById('cs-concepto-d');
+  if(csd){csd.textContent='Selecciona un concepto...';csd.classList.remove('has');}
+  var cv = document.getElementById('concepto-v');
+  if(cv) cv.value = '';
+  var catd = document.getElementById('cat-display');
+  if(catd) catd.style.display = 'none';
   buildCS('concepto', allConcepts, onConceptSel, true);
   renderPayPills();
   fillTrSels();
@@ -1326,20 +1342,19 @@ function onConceptSel(name) {
   var isFCI = name.toLowerCase().indexOf('fci') >= 0 || name.toLowerCase().indexOf('plazo fijo') >= 0 || name.toLowerCase().indexOf('constitucion') >= 0 || name.toLowerCase().indexOf('acreditacion') >= 0;
   var isIOL = name.toLowerCase().indexOf('iol') >= 0 || name.toLowerCase().indexOf('cripto') >= 0 || name.toLowerCase().indexOf('stock') >= 0 || name.toLowerCase().indexOf('broker') >= 0;
   // Show correct panel
-  var panels = ['sub-fx','sub-loan','sub-repay','sub-me','sub-fci','sub-iol'];
-  panels.forEach(function(id){var e=document.getElementById(id);if(e)e.className=e.className.replace(' vis','');});
-  var sp = document.getElementById('sub-fx');
-  if(sp) sp.className = 'sub-panel sub-fx' + (isFX&&!isME?' vis':'');
-  var slp = document.getElementById('sub-loan');
-  if(slp) slp.className = 'sub-panel sub-loan' + (name===LOAN_IN?' vis':'');
-  var srp = document.getElementById('sub-repay');
-  if(srp) srp.className = 'sub-panel sub-repay' + (name===LOAN_OUT?' vis':'');
-  var sme = document.getElementById('sub-me');
-  if(sme) sme.className = 'sub-panel sub-me' + (isME?' vis':'');
-  var sfci = document.getElementById('sub-fci');
-  if(sfci) sfci.className = 'sub-panel sub-fci' + (isFCI&&!isME?' vis':'');
-  var siol = document.getElementById('sub-iol');
-  if(siol) siol.className = 'sub-panel sub-iol' + (isIOL?' vis':'');
+  // Show/hide panels using style.display for reliable override
+  var panelMap = {
+    'sub-fx':    isFX && !isME,
+    'sub-loan':  name === LOAN_IN,
+    'sub-repay': name === LOAN_OUT,
+    'sub-me':    isME,
+    'sub-fci':   isFCI && !isME,
+    'sub-iol':   isIOL
+  };
+  Object.keys(panelMap).forEach(function(id){
+    var e = document.getElementById(id);
+    if(e) e.style.display = panelMap[id] ? 'block' : 'none';
+  });
   if(isME) initMEPanel(name);
   if(isFCI) initFCIPanel();
   if(isIOL) initIOLPanel();
@@ -1551,7 +1566,7 @@ function resetCarga() {
   var catd = document.getElementById('cat-display'); if(catd) catd.style.display='none';
   var msel = document.getElementById('mes-sel'); if(msel) msel.value='';
   ['tr-origen','tr-destino','loan-entidad-sel','repay-loan-sel'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
-  ['sub-fx','sub-loan','sub-repay','sub-cc','sub-tr','sub-me','sub-fci','sub-iol'].forEach(function(id){var e=document.getElementById(id);if(e)e.className=e.className.replace(' vis','');});
+  ['sub-fx','sub-loan','sub-repay','sub-cc','sub-tr','sub-me','sub-fci','sub-iol'].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display='none';});
   ['me-res','fci-res','iol-res'].forEach(function(id){var e=document.getElementById(id);if(e)e.classList.remove('vis');});
   var fr=document.getElementById('fx-res');if(fr)fr.classList.remove('vis');
   var rr=document.getElementById('repay-res');if(rr)rr.classList.remove('vis');
