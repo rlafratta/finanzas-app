@@ -699,7 +699,8 @@ setTimeout(function(){
 var S = {
   ejercicios:[], activeEj:null, records:{}, apertura:{},
   loans:[], customConcepts:[], customPagos:[], tarjetas:[],
-  baseConcepts:{}, basePagos:[], customIOLTypes:[]
+  baseConcepts:{}, basePagos:[], customIOLTypes:[],
+  rodados:[], inmuebles:[], fciItems:[], iolItems:[]
 };
 var balView = 'bal';
 var selPago = '';
@@ -1042,7 +1043,7 @@ function fbSaveCfg() {
     ejercicios:S.ejercicios, activeEj:S.activeEj,
     customConcepts:S.customConcepts, customPagos:S.customPagos,
     tarjetas:S.tarjetas, baseConcepts:S.baseConcepts||{},
-    basePagos:S.basePagos||[], customIOLTypes:S.customIOLTypes||[], updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    basePagos:S.basePagos||[], customIOLTypes:S.customIOLTypes||[], rodados:S.rodados||[], inmuebles:S.inmuebles||[], fciItems:S.fciItems||[], iolItems:S.iolItems||[], updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){setSyncUI('online','Guardado');})
     .catch(function(e){setSyncUI('error',e.message);});
 }
@@ -1106,6 +1107,8 @@ function loadAll() {
       S.baseConcepts = d.baseConcepts||{};
       S.basePagos = d.basePagos||[];
       S.customIOLTypes = d.customIOLTypes||[];
+      S.rodados = d.rodados||[]; S.inmuebles = d.inmuebles||[];
+      S.fciItems = d.fciItems||[]; S.iolItems = d.iolItems||[];
     }
     if (S.activeEj) {
       return fbLoadAper(S.activeEj).then(function(){
@@ -1578,53 +1581,350 @@ function resetCarga() {
 // APERTURA
 // ============================================================
 function initAper() {
-  var ej = (S.ejercicios||[]).filter(function(e){return e.id===S.activeEj;})[0];
-  var sub = document.getElementById('aper-sub');
-  if (sub) sub.textContent = ej ? 'Ejercicio ' + ej.year : 'Sin ejercicio activo';
-  var ejS = (S.ejercicios||[]).slice().sort(function(a,b){return a.year-b.year;});
-  var ci = -1;
-  for(var i=0;i<ejS.length;i++){if(ejS[i].id===S.activeEj){ci=i;break;}}
-  var prevEj = ci > 0 ? ejS[ci-1] : null;
-  var aper = getAper();
-  var hasAper = Object.keys(aper).filter(function(k){return k!=='updatedAt';}).length > 0;
-  var al = document.getElementById('aper-alert');
-  if (al) {
-    if (hasAper) { al.textContent='Ya cargados. Podes modificarlos.'; al.style.display='flex'; }
-    else if (prevEj) { al.innerHTML='<button class="btn btn-sm" onclick="importarAper('+prevEj.id+')" style="margin-right:8px">Importar saldos de '+prevEj.year+'</button>O completa manualmente:'; al.style.display='flex'; }
+  var ej=(S.ejercicios||[]).filter(function(e){return e.id===S.activeEj;})[0];
+  var sub=document.getElementById('aper-sub');
+  if(sub)sub.textContent=ej?'Ejercicio '+ej.year:'Sin ejercicio activo';
+  var ejS=(S.ejercicios||[]).slice().sort(function(a,b){return a.year-b.year;});
+  var ci=-1;for(var i=0;i<ejS.length;i++){if(ejS[i].id===S.activeEj){ci=i;break;}}
+  var prevEj=ci>0?ejS[ci-1]:null;
+  var aper=getAper();
+  var hasAper=Object.keys(aper).filter(function(k){return k!=='updatedAt';}).length>0;
+  var al=document.getElementById('aper-alert');
+  if(al){
+    if(hasAper){al.textContent='Ya cargados. Podes modificarlos.';al.style.display='flex';}
+    else if(prevEj&&prevEj.closed){al.innerHTML='<button class="btn btn-sm" onclick="importarAper('+prevEj.id+')" style="margin-right:8px">Importar saldos de '+prevEj.year+'</button>O completa manualmente:';al.style.display='flex';}
     else al.style.display='none';
   }
-  var pagos = allPNames();
-  var h = '';
-  h += '<div class="card"><div class="card-hd" style="color:var(--cyan)">ACTIVOS - Bancos / Efectivo</div>';
-  pagos.forEach(function(b){h+='<div class="field"><label>'+b+'</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="ab-'+b.replace(/[^a-zA-Z0-9]/g,'_')+'" placeholder="0.00" step="0.01" value="'+(aper['banco_'+b]||'')+'" oninput="updateAperVal()"></div></div>';});
-  h += '</div>';
-  h += '<div class="card"><div class="card-hd" style="color:var(--cyan)">ACTIVOS - Inversiones</div>';
-  INV_KEYS.forEach(function(k){h+='<div class="field"><label>'+k+'</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="ai-'+k.replace(/[^a-zA-Z0-9]/g,'_')+'" placeholder="0.00" step="0.01" value="'+(aper['inv_'+k]||'')+'" oninput="updateAperVal()"></div></div>';});
-  h += '</div>';
-  h += '<div class="card"><div class="card-hd" style="color:var(--cyan)">ACTIVOS - Bienes</div>';
-  BIENES_KEYS.forEach(function(k){h+='<div class="field"><label>'+k+'</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="abien-'+k.replace(/[^a-zA-Z0-9]/g,'_')+'" placeholder="0.00" step="0.01" value="'+(aper['bien_'+k]||'')+'" oninput="updateAperVal()"></div></div>';});
-  h += '</div>';
-  h += '<div class="card"><div class="card-hd" style="color:var(--pasivo)">PASIVOS - Prestamos</div>';
-  if ((S.loans||[]).length) {
-    S.loans.forEach(function(l){h+='<div class="field"><label>'+l.nombre+'</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="aloan-'+l.id+'" placeholder="0.00" step="0.01" value="'+(aper['loan_'+l.id]||'')+'" oninput="updateAperVal()"></div></div>';});
-  } else { h += '<p style="font-size:12px;color:var(--tx3)">Sin prestamos. Crea uno en la seccion Prestamos.</p>'; }
-  h += '</div>';
-  h += '<div class="card"><div class="card-hd" style="color:var(--patrim)">PATRIMONIO NETO</div>';
-  h += '<p style="font-size:12px;color:var(--tx2);margin-bottom:8px;line-height:1.5">Si no hay ejercicio anterior, ingresa el saldo acumulado de Resultados.</p>';
-  h += '<div class="field"><label>Resultados Acumulados</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="apn" placeholder="0.00" step="0.01" value="'+(aper['pn_resultados']||'')+'" oninput="updateAperVal()"></div></div>';
-  h += '</div>';
-  h += '<div id="aper-val" style="margin-bottom:12px"></div>';
-  h += '<button class="btn btn-prim btn-full" onclick="guardarAper()">Guardar saldos iniciales</button>';
-  var body = document.getElementById('aper-body');
-  if (body) body.innerHTML = h;
+  var pagos=allPNames();
+  var h='';
+
+  // BANCOS
+  h+='<div class="card"><div class="card-hd" style="color:var(--cyan)">ACTIVOS - Bancos / Efectivo</div>';
+  pagos.forEach(function(b){
+    h+='<div class="field"><label>'+b+'</label><div class="amt-wrap"><span class="amt-sym">$</span>'+
+      '<input type="number" id="ab-'+b.replace(/[^a-zA-Z0-9]/g,'_')+'" placeholder="0.00" step="0.01" value="'+(aper['banco_'+b]||'')+'" oninput="updateAperVal()"></div></div>';
+  });
+  h+='</div>';
+
+  // MONEDA EXTRANJERA
+  h+='<div class="card" style="border-color:rgba(6,182,212,.2)"><div class="card-hd" style="color:var(--cyan)">ACTIVOS - Moneda Extranjera</div>';
+  h+='<p style="font-size:11px;color:var(--tx2);margin-bottom:8px">Saldo inicial en divisas. Cantidad x TC = pesos.</p>';
+  CURRENCIES.forEach(function(cur){
+    var qty=aper['me_qty_'+cur]||0;var tc=aper['me_tc_'+cur]||0;
+    h+='<div class="card-hd" style="font-size:10px;color:var(--tx3);margin:8px 0 4px">'+cur+'</div>';
+    h+='<div class="row2">';
+    h+='<div class="field"><label>Cantidad '+cur+'</label><input type="number" id="ame-qty-'+cur+'" placeholder="0.00" step="0.01" value="'+(qty||'')+'"></div>';
+    h+='<div class="field"><label>TC ($/'+cur+')</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="ame-tc-'+cur+'" placeholder="0.00" step="0.01" value="'+(tc||'')+'"></div></div>';
+    h+='</div>';
+  });
+  h+='</div>';
+
+  // FCI
+  h+='<div class="card" style="border-color:rgba(168,85,247,.2)"><div class="card-hd" style="color:var(--purple)">ACTIVOS - FCI</div>';
+  h+='<div id="aper-fci-list">';
+  (S.fciItems||[]).forEach(function(item,i){
+    h+=aperFCIRow(item,i,aper);
+  });
+  h+='</div>';
+  h+='<button class="btn btn-sm" style="margin-top:8px" onclick="addAperFCI()">+ Agregar FCI</button></div>';
+
+  // IOL / CRIPTOS
+  h+='<div class="card" style="border-color:rgba(245,158,11,.2)"><div class="card-hd" style="color:var(--gold)">ACTIVOS - IOL / Criptos</div>';
+  h+='<div id="aper-iol-list">';
+  (S.iolItems||[]).forEach(function(item,i){
+    h+=aperIOLRow(item,i,aper);
+  });
+  h+='</div>';
+  h+='<button class="btn btn-sm" style="margin-top:8px" onclick="addAperIOL()">+ Agregar IOL/Cripto</button></div>';
+
+  // RODADOS
+  h+='<div class="card" style="border-color:rgba(16,185,129,.2)"><div class="card-hd" style="color:var(--accent)">ACTIVOS - Rodados</div>';
+  h+='<div id="aper-rod-list">';
+  (S.rodados||[]).forEach(function(item,i){
+    h+=aperRodadoRow(item,i,aper);
+  });
+  h+='</div>';
+  h+='<button class="btn btn-sm" style="margin-top:8px" onclick="addAperRodado()">+ Agregar Rodado</button></div>';
+
+  // INMUEBLES
+  h+='<div class="card" style="border-color:rgba(16,185,129,.2)"><div class="card-hd" style="color:var(--accent)">ACTIVOS - Inmuebles</div>';
+  h+='<div id="aper-inm-list">';
+  (S.inmuebles||[]).forEach(function(item,i){
+    h+=aperInmuebleRow(item,i,aper);
+  });
+  h+='</div>';
+  h+='<button class="btn btn-sm" style="margin-top:8px" onclick="addAperInmueble()">+ Agregar Inmueble</button></div>';
+
+  // PASIVOS
+  h+='<div class="card"><div class="card-hd" style="color:var(--pasivo)">PASIVOS - Prestamos</div>';
+  if((S.loans||[]).length){
+    S.loans.forEach(function(l){
+      h+='<div class="field"><label>'+l.nombre+'</label><div class="amt-wrap"><span class="amt-sym">$</span>'+
+        '<input type="number" id="aloan-'+l.id+'" placeholder="0.00" step="0.01" value="'+(aper['loan_'+l.id]||'')+'" oninput="updateAperVal()"></div></div>';
+    });
+  } else { h+='<p style="font-size:12px;color:var(--tx3)">Sin prestamos. Crea uno en Prestamos.</p>'; }
+  h+='</div>';
+
+  // PN
+  h+='<div class="card"><div class="card-hd" style="color:var(--patrim)">PATRIMONIO NETO</div>';
+  h+='<p style="font-size:12px;color:var(--tx2);margin-bottom:8px;line-height:1.5">Si no hay ejercicio anterior, ingresa el resultado acumulado.</p>';
+  h+='<div class="field"><label>Resultados Acumulados</label><div class="amt-wrap"><span class="amt-sym">$</span>'+
+    '<input type="number" id="apn" placeholder="0.00" step="0.01" value="'+(aper['pn_resultados']||'')+'" oninput="updateAperVal()"></div></div>';
+  h+='</div>';
+  h+='<div id="aper-val" style="margin-bottom:12px"></div>';
+  h+='<button class="btn btn-prim btn-full" onclick="guardarAper()">Guardar saldos iniciales</button>';
+
+  var body=document.getElementById('aper-body');
+  if(body){body.innerHTML='';body.innerHTML=h;}
   updateAperVal();
 }
 
+function aperFCIRow(item,i,aper) {
+  var key='fci_'+item.id;
+  var pesos=aper[key]||0;
+  return '<div class="card" style="margin:6px 0;padding:10px;background:var(--bg3)">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:12px;font-weight:600;color:var(--purple)">'+(item.fondo||'FCI')+'</span>'+
+      '<button class="btn-del" onclick="removeAperFCI('+i+')">x</button>'+
+    '</div>'+
+    '<div class="row2">'+
+      '<div class="field"><label>Fondo</label><input type="text" id="afci-fondo-'+i+'" value="'+(item.fondo||'')+'" placeholder="Nombre del fondo" onchange="updateAperFCI('+i+')"></div>'+
+      '<div class="field"><label>Cuotapartes</label><input type="number" id="afci-cp-'+i+'" value="'+(item.cp||'')+'" placeholder="0.0000" step="0.0001" oninput="calcAperFCI('+i+')"></div>'+
+    '</div>'+
+    '<div class="row2">'+
+      '<div class="field"><label>Valor cuotaparte ($)</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="afci-vl-'+i+'" value="'+(item.vl||'')+'" placeholder="0.00" step="0.01" oninput="calcAperFCI('+i+')"></div></div>'+
+      '<div class="field"><label>Total ($)</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="afci-tot-'+i+'" value="'+(pesos||'')+'" placeholder="0.00" step="0.01" oninput="updateAperVal()"></div></div>'+
+    '</div>'+
+  '</div>';
+}
+
+function aperIOLRow(item,i,aper) {
+  var key='iol_'+item.id;
+  var pesos=aper[key]||0;
+  return '<div class="card" style="margin:6px 0;padding:10px;background:var(--bg3)">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:12px;font-weight:600;color:var(--gold)">'+(item.tipo?'['+item.tipo+'] ':'')+''+(item.nombre||'IOL')+'</span>'+
+      '<button class="btn-del" onclick="removeAperIOL('+i+')">x</button>'+
+    '</div>'+
+    '<div class="row2">'+
+      '<div class="field"><label>Tipo</label><select id="aiol-tipo-'+i+'" onchange="updateAperIOL('+i+')">'+
+        getIOLTypes().map(function(t){return '<option'+(t===item.tipo?' selected':'')+'>'+t+'</option>';}).join('')+
+      '</select></div>'+
+      '<div class="field"><label>Nombre/Codigo</label><input type="text" id="aiol-nom-'+i+'" value="'+(item.nombre||'')+'" placeholder="Ej: YPF, BTC..." onchange="updateAperIOL('+i+')"></div>'+
+    '</div>'+
+    '<div class="row2">'+
+      '<div class="field"><label>Cantidad</label><input type="number" id="aiol-qty-'+i+'" value="'+(item.qty||'')+'" placeholder="0.0000" step="0.0001" oninput="calcAperIOL('+i+')"></div>'+
+      '<div class="field"><label>Cotizacion</label><input type="number" id="aiol-cot-'+i+'" value="'+(item.cot||'')+'" placeholder="0.00" step="0.01" oninput="calcAperIOL('+i+')"></div>'+
+    '</div>'+
+    '<div class="row2">'+
+      '<div class="field"><label>Moneda</label><select id="aiol-cur-'+i+'" onchange="calcAperIOL('+i+')">'+
+        '<option value="ARS"'+(item.cur==='ARS'||!item.cur?' selected':'')+'>$ Pesos</option>'+
+        '<option value="USD"'+(item.cur==='USD'?' selected':'')+'>USD</option>'+
+      '</select></div>'+
+      '<div class="field"><label>TC (si USD)</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="aiol-tc-'+i+'" value="'+(item.tc||'')+'" placeholder="0.00" step="0.01" oninput="calcAperIOL('+i+')"></div></div>'+
+    '</div>'+
+    '<div class="field"><label>Total ($)</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="aiol-tot-'+i+'" value="'+(pesos||'')+'" placeholder="0.00" step="0.01" oninput="updateAperVal()"></div></div>'+
+  '</div>';
+}
+
+function aperRodadoRow(item,i,aper) {
+  var key='rod_'+item.id;
+  var pesos=aper[key]||0;
+  return '<div class="card" style="margin:6px 0;padding:10px;background:var(--bg3)">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:12px;font-weight:600;color:var(--accent)">'+(item.patente||'Rodado')+(item.desc?' - '+item.desc:'')+'</span>'+
+      '<button class="btn-del" onclick="removeAperRodado('+i+')">x</button>'+
+    '</div>'+
+    '<div class="row2">'+
+      '<div class="field"><label>Patente</label><input type="text" id="arod-pat-'+i+'" value="'+(item.patente||'')+'" placeholder="Ej: ABC123" onchange="updateAperRodado('+i+')"></div>'+
+      '<div class="field"><label>Descripcion</label><input type="text" id="arod-desc-'+i+'" value="'+(item.desc||'')+'" placeholder="Ej: VW Gol 2020" onchange="updateAperRodado('+i+')"></div>'+
+    '</div>'+
+    '<div class="field"><label>Valor ($)</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="arod-val-'+i+'" value="'+(pesos||'')+'" placeholder="0.00" step="0.01" oninput="updateAperVal()"></div></div>'+
+  '</div>';
+}
+
+function aperInmuebleRow(item,i,aper) {
+  var key='inm_'+item.id;
+  var pesos=aper[key]||0;
+  return '<div class="card" style="margin:6px 0;padding:10px;background:var(--bg3)">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+      '<span style="font-size:12px;font-weight:600;color:var(--accent)">'+(item.dir||'Inmueble')+'</span>'+
+      '<button class="btn-del" onclick="removeAperInmueble('+i+')">x</button>'+
+    '</div>'+
+    '<div class="field"><label>Direccion / Descripcion</label><input type="text" id="ainm-dir-'+i+'" value="'+(item.dir||'')+'" placeholder="Ej: Av. Siempreviva 742..." onchange="updateAperInmueble('+i+')"></div>'+
+    '<div class="field"><label>Valor ($)</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="ainm-val-'+i+'" value="'+(pesos||'')+'" placeholder="0.00" step="0.01" oninput="updateAperVal()"></div></div>'+
+  '</div>';
+}
+
+
+// ── APERTURA ITEM HELPERS ────────────────────────────────────────
+function addAperFCI() {
+  if(!S.fciItems)S.fciItems=[];
+  var id=Date.now();
+  S.fciItems.push({id:id,fondo:'',cp:0,vl:0});
+  fbSaveCfg();
+  initAper();
+}
+function removeAperFCI(i) {
+  var item=S.fciItems[i];
+  // Check if in use in any record
+  var inUse=Object.values(S.records||{}).some(function(arr){
+    return (arr||[]).some(function(r){return r.inv==='FCI'&&r.fciFondo===item.fondo;});
+  });
+  if(inUse)return toast('No se puede eliminar: tiene movimientos',true);
+  S.fciItems.splice(i,1);
+  fbSaveCfg();
+  initAper();
+}
+function calcAperFCI(i) {
+  var cp=parseFloat((document.getElementById('afci-cp-'+i)||{}).value)||0;
+  var vl=parseFloat((document.getElementById('afci-vl-'+i)||{}).value)||0;
+  var totEl=document.getElementById('afci-tot-'+i);
+  if(cp&&vl&&totEl){totEl.value=(cp*vl).toFixed(2);}
+  updateAperVal();
+}
+function updateAperFCI(i) {
+  var item=S.fciItems[i]; if(!item)return;
+  var f=document.getElementById('afci-fondo-'+i);
+  if(f)item.fondo=f.value;
+  fbSaveCfg();
+}
+
+function addAperIOL() {
+  if(!S.iolItems)S.iolItems=[];
+  S.iolItems.push({id:Date.now(),tipo:'',nombre:'',qty:0,cot:0,cur:'ARS',tc:0});
+  fbSaveCfg();
+  initAper();
+}
+function removeAperIOL(i) {
+  var item=S.iolItems[i];
+  var inUse=Object.values(S.records||{}).some(function(arr){
+    return (arr||[]).some(function(r){return r.inv==='Criptos / IOL'&&r.iolName===item.nombre;});
+  });
+  if(inUse)return toast('No se puede eliminar: tiene movimientos',true);
+  S.iolItems.splice(i,1);
+  fbSaveCfg();
+  initAper();
+}
+function calcAperIOL(i) {
+  var qty=parseFloat((document.getElementById('aiol-qty-'+i)||{}).value)||0;
+  var cot=parseFloat((document.getElementById('aiol-cot-'+i)||{}).value)||0;
+  var tc=parseFloat((document.getElementById('aiol-tc-'+i)||{}).value)||0;
+  var cur=(document.getElementById('aiol-cur-'+i)||{}).value||'ARS';
+  var total=cur==='USD'&&tc>0?qty*cot*tc:qty*cot;
+  var totEl=document.getElementById('aiol-tot-'+i);
+  if(qty&&cot&&totEl)totEl.value=total.toFixed(2);
+  updateAperVal();
+}
+function updateAperIOL(i) {
+  var item=S.iolItems[i]; if(!item)return;
+  var t=document.getElementById('aiol-tipo-'+i);
+  var n=document.getElementById('aiol-nom-'+i);
+  if(t)item.tipo=t.value;
+  if(n)item.nombre=n.value;
+  fbSaveCfg();
+}
+
+function addAperRodado() {
+  if(!S.rodados)S.rodados=[];
+  S.rodados.push({id:Date.now(),patente:'',desc:''});
+  fbSaveCfg();
+  initAper();
+}
+function removeAperRodado(i) {
+  var item=S.rodados[i];
+  var key='rod_'+item.id;
+  var inUse=Object.values(S.records||{}).some(function(arr){
+    return (arr||[]).some(function(r){return r.bienKey===key;});
+  });
+  if(inUse)return toast('No se puede eliminar: tiene movimientos',true);
+  S.rodados.splice(i,1);
+  fbSaveCfg();
+  initAper();
+}
+function updateAperRodado(i) {
+  var item=S.rodados[i]; if(!item)return;
+  var p=document.getElementById('arod-pat-'+i);
+  var d=document.getElementById('arod-desc-'+i);
+  if(p)item.patente=p.value;
+  if(d)item.desc=d.value;
+  fbSaveCfg();
+}
+
+function addAperInmueble() {
+  if(!S.inmuebles)S.inmuebles=[];
+  S.inmuebles.push({id:Date.now(),dir:''});
+  fbSaveCfg();
+  initAper();
+}
+function removeAperInmueble(i) {
+  var item=S.inmuebles[i];
+  var key='inm_'+item.id;
+  var inUse=Object.values(S.records||{}).some(function(arr){
+    return (arr||[]).some(function(r){return r.bienKey===key;});
+  });
+  if(inUse)return toast('No se puede eliminar: tiene movimientos',true);
+  S.inmuebles.splice(i,1);
+  fbSaveCfg();
+  initAper();
+}
+function updateAperInmueble(i) {
+  var item=S.inmuebles[i]; if(!item)return;
+  var d=document.getElementById('ainm-dir-'+i);
+  if(d)item.dir=d.value;
+  fbSaveCfg();
+}
 function updateAperVal() {
   var tA=0, tP=0;
   allPNames().forEach(function(b){var e=document.getElementById('ab-'+b.replace(/[^a-zA-Z0-9]/g,'_'));if(e)tA+=parseFloat(e.value)||0;});
-  INV_KEYS.forEach(function(k){var e=document.getElementById('ai-'+k.replace(/[^a-zA-Z0-9]/g,'_'));if(e)tA+=parseFloat(e.value)||0;});
-  BIENES_KEYS.forEach(function(k){var e=document.getElementById('abien-'+k.replace(/[^a-zA-Z0-9]/g,'_'));if(e)tA+=parseFloat(e.value)||0;});
+  // ME
+  CURRENCIES.forEach(function(cur){var q=parseFloat((document.getElementById('ame-qty-'+cur)||{}).value)||0;var t=parseFloat((document.getElementById('ame-tc-'+cur)||{}).value)||0;if(q&&t)tA+=q*t;});
+  // FCI items
+  (S.fciItems||[]).forEach(function(item,i){var e=document.getElementById('afci-tot-'+i);if(e)tA+=parseFloat(e.value)||0;});
+  // IOL items
+  (S.iolItems||[]).forEach(function(item,i){var e=document.getElementById('aiol-tot-'+i);if(e)tA+=parseFloat(e.value)||0;});
+  // Rodados
+  (S.rodados||[]).forEach(function(item,i){var e=document.getElementById('arod-val-'+i);if(e)tA+=parseFloat(e.value)||0;});
+  // Inmuebles
+  (S.inmuebles||[]).forEach(function(item,i){var e=document.getElementById('ainm-val-'+i);if(e)tA+=parseFloat(e.value)||0;});
+  // Save ME
+  CURRENCIES.forEach(function(cur){
+    var q=parseFloat((document.getElementById('ame-qty-'+cur)||{}).value)||0;
+    var t=parseFloat((document.getElementById('ame-tc-'+cur)||{}).value)||0;
+    if(q&&t){data['me_qty_'+cur]=q;data['me_tc_'+cur]=t;data['me_pesos_'+cur]=q*t;}
+  });
+  // Save FCI items
+  (S.fciItems||[]).forEach(function(item,i){
+    var f=document.getElementById('afci-fondo-'+i);var cp=document.getElementById('afci-cp-'+i);
+    var vl=document.getElementById('afci-vl-'+i);var tot=document.getElementById('afci-tot-'+i);
+    if(f)item.fondo=f.value;if(cp)item.cp=parseFloat(cp.value)||0;if(vl)item.vl=parseFloat(vl.value)||0;
+    var v=parseFloat((tot||{}).value)||0;if(v)data['fci_'+item.id]=v;
+  });
+  // Save IOL items
+  (S.iolItems||[]).forEach(function(item,i){
+    var t=document.getElementById('aiol-tipo-'+i);var n=document.getElementById('aiol-nom-'+i);
+    var qty=document.getElementById('aiol-qty-'+i);var cot=document.getElementById('aiol-cot-'+i);
+    var cur=document.getElementById('aiol-cur-'+i);var tc=document.getElementById('aiol-tc-'+i);
+    var tot=document.getElementById('aiol-tot-'+i);
+    if(t)item.tipo=t.value;if(n)item.nombre=n.value;
+    if(qty)item.qty=parseFloat(qty.value)||0;if(cot)item.cot=parseFloat(cot.value)||0;
+    if(cur)item.cur=cur.value;if(tc)item.tc=parseFloat(tc.value)||0;
+    var v=parseFloat((tot||{}).value)||0;if(v)data['iol_'+item.id]=v;
+  });
+  // Save Rodados
+  (S.rodados||[]).forEach(function(item,i){
+    var p=document.getElementById('arod-pat-'+i);var d=document.getElementById('arod-desc-'+i);
+    var v=document.getElementById('arod-val-'+i);
+    if(p)item.patente=p.value;if(d)item.desc=d.value;
+    var val=parseFloat((v||{}).value)||0;if(val)data['rod_'+item.id]=val;
+  });
+  // Save Inmuebles
+  (S.inmuebles||[]).forEach(function(item,i){
+    var d=document.getElementById('ainm-dir-'+i);var v=document.getElementById('ainm-val-'+i);
+    if(d)item.dir=d.value;
+    var val=parseFloat((v||{}).value)||0;if(val)data['inm_'+item.id]=val;
+  });
+  fbSaveCfg(); // Save items metadata
   (S.loans||[]).forEach(function(l){var e=document.getElementById('aloan-'+l.id);if(e)tP+=parseFloat(e.value)||0;});
   var pnEl = document.getElementById('apn');
   var pn = parseFloat((pnEl&&pnEl.value)||'0')||0;
@@ -1642,6 +1942,44 @@ function guardarAper() {
   allPNames().forEach(function(b){var e=document.getElementById('ab-'+b.replace(/[^a-zA-Z0-9]/g,'_'));if(e){var v=parseFloat(e.value)||0;if(v)data['banco_'+b]=v;}});
   INV_KEYS.forEach(function(k){var e=document.getElementById('ai-'+k.replace(/[^a-zA-Z0-9]/g,'_'));if(e){var v=parseFloat(e.value)||0;if(v)data['inv_'+k]=v;}});
   BIENES_KEYS.forEach(function(k){var e=document.getElementById('abien-'+k.replace(/[^a-zA-Z0-9]/g,'_'));if(e){var v=parseFloat(e.value)||0;if(v)data['bien_'+k]=v;}});
+  // Save ME
+  CURRENCIES.forEach(function(cur){
+    var q=parseFloat((document.getElementById('ame-qty-'+cur)||{}).value)||0;
+    var t=parseFloat((document.getElementById('ame-tc-'+cur)||{}).value)||0;
+    if(q&&t){data['me_qty_'+cur]=q;data['me_tc_'+cur]=t;data['me_pesos_'+cur]=q*t;}
+  });
+  // Save FCI items
+  (S.fciItems||[]).forEach(function(item,i){
+    var f=document.getElementById('afci-fondo-'+i);var cp=document.getElementById('afci-cp-'+i);
+    var vl=document.getElementById('afci-vl-'+i);var tot=document.getElementById('afci-tot-'+i);
+    if(f)item.fondo=f.value;if(cp)item.cp=parseFloat(cp.value)||0;if(vl)item.vl=parseFloat(vl.value)||0;
+    var v=parseFloat((tot||{}).value)||0;if(v)data['fci_'+item.id]=v;
+  });
+  // Save IOL items
+  (S.iolItems||[]).forEach(function(item,i){
+    var t=document.getElementById('aiol-tipo-'+i);var n=document.getElementById('aiol-nom-'+i);
+    var qty=document.getElementById('aiol-qty-'+i);var cot=document.getElementById('aiol-cot-'+i);
+    var cur=document.getElementById('aiol-cur-'+i);var tc=document.getElementById('aiol-tc-'+i);
+    var tot=document.getElementById('aiol-tot-'+i);
+    if(t)item.tipo=t.value;if(n)item.nombre=n.value;
+    if(qty)item.qty=parseFloat(qty.value)||0;if(cot)item.cot=parseFloat(cot.value)||0;
+    if(cur)item.cur=cur.value;if(tc)item.tc=parseFloat(tc.value)||0;
+    var v=parseFloat((tot||{}).value)||0;if(v)data['iol_'+item.id]=v;
+  });
+  // Save Rodados
+  (S.rodados||[]).forEach(function(item,i){
+    var p=document.getElementById('arod-pat-'+i);var d=document.getElementById('arod-desc-'+i);
+    var v=document.getElementById('arod-val-'+i);
+    if(p)item.patente=p.value;if(d)item.desc=d.value;
+    var val=parseFloat((v||{}).value)||0;if(val)data['rod_'+item.id]=val;
+  });
+  // Save Inmuebles
+  (S.inmuebles||[]).forEach(function(item,i){
+    var d=document.getElementById('ainm-dir-'+i);var v=document.getElementById('ainm-val-'+i);
+    if(d)item.dir=d.value;
+    var val=parseFloat((v||{}).value)||0;if(val)data['inm_'+item.id]=val;
+  });
+  fbSaveCfg(); // Save items metadata
   (S.loans||[]).forEach(function(l){var e=document.getElementById('aloan-'+l.id);if(e){var v=parseFloat(e.value)||0;if(v)data['loan_'+l.id]=v;}});
   var pnEl=document.getElementById('apn'); if(pnEl){var v=parseFloat(pnEl.value)||0;if(v)data['pn_resultados']=v;}
   fbSaveAper(S.activeEj, data).then(function(){toast('Saldos iniciales guardados');});
@@ -1779,9 +2117,36 @@ function renderBalMain() {
     '<div class="bal-sub" style="color:var(--gold)">Ver detalle ▶</div></div>';
   tI+=usdP; tA=tB+tI+tBi;
   h += '</div><div style="font-size:10px;color:var(--tx3);margin:8px 0 6px;text-transform:uppercase;letter-spacing:.7px">Bienes</div><div class="bal-grid">';
-  BIENES_KEYS.forEach(function(k){var v=bienes[k]||0;
+  // Rodados grouped
+  var totalRod=0;
+  (S.rodados||[]).forEach(function(item){totalRod+=aper['rod_'+item.id]||0;});
+  totalRod+=(bienes['Rodados']||0);
+  if(totalRod>0.005){
+    tBi+=totalRod;
+    h+='<div class="bal-card a-c" style="cursor:pointer;border-left-color:var(--accent)" id="bal-rod-card">';
+    h+='<div class="bal-name">Rodados</div><div class="bal-val '+scl(totalRod)+'">'+sv(totalRod)+'</div>';
+    h+='<div class="bal-sub" style="color:var(--accent)">'+(S.rodados||[]).length+' vehículo(s) ▶</div></div>';
+  }
+  // Inmuebles grouped
+  var totalInm=0;
+  (S.inmuebles||[]).forEach(function(item){totalInm+=aper['inm_'+item.id]||0;});
+  totalInm+=(bienes['Inmuebles - LoteTdS III']||0)+(bienes['Casa Roldan - Obra 1 Etapa Quincho']||0)+(bienes['Casa Roldan - Obra 2 Etapa Casa']||0);
+  if(totalInm>0.005){
+    tBi+=totalInm;
+    h+='<div class="bal-card a-c" style="cursor:pointer;border-left-color:var(--accent)" id="bal-inm-card">';
+    h+='<div class="bal-name">Inmuebles</div><div class="bal-val '+scl(totalInm)+'">'+sv(totalInm)+'</div>';
+    h+='<div class="bal-sub" style="color:var(--accent)">'+(S.inmuebles||[]).length+' propiedad(es) ▶</div></div>';
+  }
+  // Other bienes (backward compat excluding already shown)
+  var shownBienes=['Rodados','Inmuebles - LoteTdS III','Casa Roldan - Obra 1 Etapa Quincho','Casa Roldan - Obra 2 Etapa Casa'];
+  BIENES_KEYS.forEach(function(k){
+    if(shownBienes.indexOf(k)>=0)return;
+    var v=bienes[k]||0;
     if(Math.abs(v)<0.005&&!hasMovement(k,'bien'))return;
-    h+='<div class="bal-card a-c"><div class="bal-name">'+k+'</div><div class="bal-val '+scl(v)+'">'+sv(v)+'</div></div>';});
+    tBi+=v;
+    h+='<div class="bal-card a-c"><div class="bal-name">'+k+'</div><div class="bal-val '+scl(v)+'">'+sv(v)+'</div></div>';
+  });
+  tA=tB+tI+tBi;
   h += '</div><div class="bal-total bt-act"><span>Total Activos</span><span>'+sv(tA)+'</span></div></div>';
   // PASIVOS
   h += '<div class="bal-section"><div class="bal-hd bal-pas"><span>PASIVOS</span><span>'+sv(tP)+'</span></div><div class="bal-grid">';
@@ -1809,7 +2174,14 @@ function renderBalMain() {
   h += '<tr class="tf"><td>Subtotal Egresos</td><td class="td-neg td-b">−$'+fmt(tEg)+'</td></tr>';
   h += '<tr class="tf" style="background:rgba(99,102,241,.1)"><td style="background:rgba(99,102,241,.1);color:#a5b4fc;font-family:var(--hf)">Resultado del Ejercicio</td><td class="'+(res>=0?'td-pos':'td-neg')+' td-b" style="background:rgba(99,102,241,.1)">'+sv(res)+'</td></tr>';
   h += '</tbody></table></div></div>';
-  if(bc)bc.innerHTML=h;
+  if(bc){
+    bc.innerHTML=h;
+    // Add onclick for bienes drill-down after DOM is ready
+    var rodCard=document.getElementById('bal-rod-card');
+    if(rodCard)rodCard.onclick=function(){drillBienes('rod');};
+    var inmCard=document.getElementById('bal-inm-card');
+    if(inmCard)inmCard.onclick=function(){drillBienes('inm');};
+  }
 }
 
 function renderResultados() { renderBalMain(); }
@@ -2473,6 +2845,44 @@ function calcIOL() {
   } else { if(res)res.classList.remove('vis'); }
 }
 
+
+function drillBienes(tipo) {
+  var bc=document.getElementById('bal-content'); if(!bc)return;
+  var aper=getAper();
+  var isTipo = tipo==='rod';
+  var items = isTipo ? (S.rodados||[]) : (S.inmuebles||[]);
+  var title = isTipo ? 'Rodados' : 'Inmuebles';
+  var prefix = isTipo ? 'rod_' : 'inm_';
+  var h='<div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">';
+  h+='<button class="btn btn-sm" onclick="safeRenderBalance()">&#8592; Volver</button>';
+  h+='<span style="font-family:var(--hf);font-size:16px;font-weight:700;color:var(--accent)">'+title+'</span>';
+  h+='</div>';
+  h+='<div class="mwrap"><table><thead><tr>';
+  if(isTipo){h+='<th>Patente</th><th>Descripcion</th>';}
+  else{h+='<th>Direccion / Descripcion</th>';}
+  h+='<th>Valor</th></tr></thead><tbody>';
+  var total=0;
+  items.forEach(function(item){
+    var v=aper[prefix+item.id]||0; total+=v;
+    h+='<tr>';
+    if(isTipo){
+      h+='<td style="font-weight:600">'+(item.patente||'-')+'</td>';
+      h+='<td style="color:var(--tx2);font-size:12px">'+(item.desc||'-')+'</td>';
+    } else {
+      h+='<td style="font-weight:600">'+(item.dir||'-')+'</td>';
+    }
+    h+='<td class="td-pos td-b">'+sv(v)+'</td></tr>';
+  });
+  // Old bienes for backward compat
+  if(isTipo&&(aper['bien_Rodados']||0)){
+    total+=aper['bien_Rodados'];
+    h+='<tr><td colspan="2" style="color:var(--tx3);font-size:11px">Rodados (anterior)</td><td class="td-pos td-b">'+sv(aper['bien_Rodados'])+'</td></tr>';
+  }
+  h+='<tr class="tf"><td colspan="'+(isTipo?2:1)+'">Total</td><td class="td-pos td-b">'+sv(total)+'</td></tr>';
+  h+='</tbody></table></div>';
+  if(!items.length)h+='<p style="color:var(--tx3);font-size:12px;margin-top:10px">Sin '+(isTipo?'rodados':'inmuebles')+' cargados. Agregalos en Saldos Iniciales.</p>';
+  bc.innerHTML=h;
+}
 function drillInv(invKey, label, color) {
   var bc = document.getElementById('bal-content'); if(!bc)return;
   var recs = activeRecs().filter(function(r){return r.inv===invKey;});
