@@ -378,6 +378,77 @@ setTimeout(function(){
           <div class="fx-res" id="repay-res" style="background:rgba(244,63,94,.06);border-color:rgba(244,63,94,.2);color:var(--pasivo)"></div>
         </div>
       </div>
+      <!-- ME Panel -->
+      <div class="card" id="sub-me" style="display:none;border-color:rgba(6,182,212,.3)">
+        <div class="card-hd" style="color:var(--cyan)">Moneda Extranjera</div>
+        <div class="row2">
+          <div class="field"><label>Divisa</label>
+            <select id="me-currency" onchange="calcME()">
+              <option>USD</option><option>EUR</option><option>BRL</option>
+              <option>CLP</option><option>UYU</option><option>GBP</option>
+              <option>CHF</option><option>CNY</option>
+            </select>
+          </div>
+          <div class="field"><label id="me-dir-label">Cantidad</label>
+            <input type="number" id="me-qty" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcME()">
+          </div>
+        </div>
+        <div class="field"><label>Tipo de cambio ($/divisa)</label>
+          <div class="amt-wrap"><span class="amt-sym">$</span>
+          <input type="number" id="me-tc" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcME()"></div>
+        </div>
+        <div class="fx-res vis" id="me-res" style="display:none"></div>
+      </div>
+      <!-- FCI Panel -->
+      <div class="card" id="sub-fci" style="display:none;border-color:rgba(168,85,247,.3)">
+        <div class="card-hd" style="color:var(--purple)">Fondo de Inversion</div>
+        <div class="field"><label>Fondo / Entidad</label>
+          <input type="text" id="fci-fondo" placeholder="Ej: Galicia Ahorro, Balanz Capital...">
+        </div>
+        <div class="row2">
+          <div class="field"><label>Cuotapartes</label>
+            <input type="number" id="fci-cp" placeholder="0.0000" step="0.0001" min="0" inputmode="decimal" oninput="calcFCI()">
+          </div>
+          <div class="field"><label>Valor cuotaparte ($)</label>
+            <div class="amt-wrap"><span class="amt-sym">$</span>
+            <input type="number" id="fci-vl" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcFCI()"></div>
+          </div>
+        </div>
+        <div class="fx-res vis" id="fci-res" style="display:none"></div>
+      </div>
+      <!-- IOL Panel -->
+      <div class="card" id="sub-iol" style="display:none;border-color:rgba(245,158,11,.3)">
+        <div class="card-hd" style="color:var(--gold)">Inversion IOL / Criptos</div>
+        <div class="row2">
+          <div class="field"><label>Tipo</label>
+            <select id="iol-type-sel" onchange="onIOLTypeChange()"><option value="">-- Tipo --</option></select>
+          </div>
+          <div class="field"><label>Nombre / Codigo</label>
+            <input type="text" id="iol-name" placeholder="Ej: YPF, BTC, AL30...">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Cantidad</label>
+            <input type="number" id="iol-qty" placeholder="0.0000" step="0.0001" min="0" inputmode="decimal" oninput="calcIOL()">
+          </div>
+          <div class="field"><label>Cotizacion</label>
+            <input type="number" id="iol-cot" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcIOL()">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Moneda</label>
+            <select id="iol-currency" onchange="calcIOL()">
+              <option value="ARS">$ Pesos</option>
+              <option value="USD">USD Dolares</option>
+            </select>
+          </div>
+          <div class="field"><label>TC (si es USD)</label>
+            <div class="amt-wrap"><span class="amt-sym">$</span>
+            <input type="number" id="iol-tc" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcIOL()"></div>
+          </div>
+        </div>
+        <div class="fx-res vis" id="iol-res" style="display:none"></div>
+      </div>
       <div class="card">
         <div class="card-hd" id="pago-hd">Forma de Pago</div>
         <div class="pills" id="pay-pills"></div>
@@ -553,8 +624,44 @@ setTimeout(function(){
         </div>
         <p style="font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5">Cambios sincronizados automaticamente entre todos tus dispositivos.</p>
       </div>
+      <div class="card" style="border-color:rgba(168,85,247,.2)">
+        <div class="card-hd" style="color:var(--purple)">Valuacion FCI</div>
+        <p style="font-size:12px;color:var(--tx2);margin-bottom:10px;line-height:1.5">Actualiza el valor del FCI segun precio actual de cuotaparte. Genera un registro de Intereses FCI.</p>
+        <div class="row2" style="margin-bottom:8px">
+          <div class="field"><label>Mes</label>
+            <select id="val-fci-mes"><option value="">-- Mes --</option><option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option><option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option><option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option></select>
+          </div>
+          <div class="field"><label>Fondo</label><input type="text" id="val-fci-fondo" placeholder="Ej: Galicia Ahorro..."></div>
+        </div>
+        <div class="row2" style="margin-bottom:8px">
+          <div class="field"><label>Cuotapartes actuales</label><input type="number" id="val-fci-cp" placeholder="0.0000" step="0.0001" min="0" inputmode="decimal" oninput="calcValFCI()"></div>
+          <div class="field"><label>Valor actual cuotaparte ($)</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="val-fci-vl" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcValFCI()"></div></div>
+        </div>
+        <div id="val-fci-prev" style="display:none;padding:9px 12px;border-radius:var(--rs);margin-bottom:8px;font-size:13px;font-family:var(--hf);font-weight:700"></div>
+        <button class="btn btn-blue" onclick="aplicarValFCI()">Aplicar valuacion FCI</button>
+      </div>
+      <div class="card" style="border-color:rgba(245,158,11,.2)">
+        <div class="card-hd" style="color:var(--gold)">Valuacion IOL / Criptos</div>
+        <p style="font-size:12px;color:var(--tx2);margin-bottom:10px;line-height:1.5">Actualiza el valor de tus inversiones IOL/Criptos. Genera un registro de Resultado IOL.</p>
+        <div class="row2" style="margin-bottom:8px">
+          <div class="field"><label>Mes</label>
+            <select id="val-iol-mes"><option value="">-- Mes --</option><option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option><option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option><option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option></select>
+          </div>
+          <div class="field"><label>Instrumento</label><input type="text" id="val-iol-name" placeholder="Ej: YPF, BTC, AL30..."></div>
+        </div>
+        <div class="row2" style="margin-bottom:8px">
+          <div class="field"><label>Cantidad</label><input type="number" id="val-iol-qty" placeholder="0.0000" step="0.0001" min="0" inputmode="decimal" oninput="calcValIOL()"></div>
+          <div class="field"><label>Cotizacion actual</label><input type="number" id="val-iol-cot" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcValIOL()"></div>
+        </div>
+        <div class="row2" style="margin-bottom:8px">
+          <div class="field"><label>Saldo historico en pesos</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="val-iol-hist" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcValIOL()"></div></div>
+          <div class="field"><label>TC (si cotiza en USD)</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="val-iol-tc" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcValIOL()"></div></div>
+        </div>
+        <div id="val-iol-prev" style="display:none;padding:9px 12px;border-radius:var(--rs);margin-bottom:8px;font-size:13px;font-family:var(--hf);font-weight:700"></div>
+        <button class="btn btn-blue" onclick="aplicarValIOL()">Aplicar valuacion IOL</button>
+      </div>
       <div class="card">
-        <div class="card-hd">Diferencia de Cambio (USD)</div>
+        <div class="card-hd">Diferencia de Cambio (ME)</div>
         <p style="font-size:12px;color:var(--tx2);margin-bottom:10px;line-height:1.5">Proceso optativo. Calcula la diferencia entre el valor historico de tus dolares y el tipo de cambio al cierre del mes.</p>
         <div class="row2" style="margin-bottom:8px">
           <div class="field"><label>Mes</label>
@@ -562,7 +669,7 @@ setTimeout(function(){
           </div>
           <div class="field"><label>TC cierre ($/USD)</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="dc-tc" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcDC()"></div></div>
         </div>
-        <div id="dc-preview" style="display:none;padding:9px 12px;border-radius:var(--rs);margin-bottom:8px;font-size:13px;font-family:var(--hf);font-weight:700"></div>
+        <div id=" style="display:none;padding:9px 12px;border-radius:var(--rs);margin-bottom:8px;font-size:13px;font-family:var(--hf);font-weight:700"></div>
         <button class="btn btn-blue" onclick="aplicarDC()">Aplicar diferencia de cambio</button>
       </div>
       <div class="card">
@@ -576,61 +683,11 @@ setTimeout(function(){
         <button class="btn btn-danger" onclick="clearEj()">Borrar registros del ejercicio activo</button>
       </div>
     </div>
-
   </div>
 </div>
 </div>
 
-<!-- MODAL EJERCICIO -->
-<div class="modal-bg" id="modal-ej">
-  <div class="modal">
-    <h2 id="modal-ej-title">Nuevo Ejercicio</h2>
-    <input type="hidden" id="modal-ej-id">
-    <div class="field"><label>Ano *</label><input type="number" id="ej-year" placeholder="2026" min="2000" max="2100" inputmode="numeric"></div>
-    <div class="field"><label>Descripcion (opcional)</label><input type="text" id="ej-desc" placeholder="Ej: Ejercicio fiscal 2026"></div>
-    <div class="modal-foot"><button class="btn" onclick="closeMod('modal-ej')">Cancelar</button><button class="btn btn-prim" onclick="saveEj()">Guardar</button></div>
-  </div>
-</div>
-
-<!-- MODAL PRESTAMO -->
-<div class="modal-bg" id="modal-loan">
-  <div class="modal">
-    <h2 id="modal-loan-title">Nuevo Prestamo</h2>
-    <input type="hidden" id="modal-loan-id">
-    <div class="field"><label>Entidad *</label><input type="text" id="loan-nombre" placeholder="Ej: Banco Nacion, BBVA..."></div>
-    <div class="row2">
-      <div class="field"><label>Capital total *</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="loan-capital" placeholder="0.00" step="0.01" min="0" inputmode="decimal"></div></div>
-      <div class="field"><label>Cuotas</label><input type="number" id="loan-cuotas-m" placeholder="12" min="1" inputmode="numeric"></div>
-    </div>
-    <div class="field"><label>Fecha otorgamiento</label><input type="date" id="loan-fecha"></div>
-    <div class="field"><label>Observaciones</label><textarea id="loan-obs" rows="2" placeholder="Tasa, condiciones..."></textarea></div>
-    <div class="modal-foot"><button class="btn" onclick="closeMod('modal-loan')">Cancelar</button><button class="btn btn-prim" onclick="saveLoan()">Guardar</button></div>
-  </div>
-</div>
-
-<!-- MODAL EDITAR ITEM -->
-<div class="modal-bg" id="modal-edit">
-  <div class="modal">
-    <h2 id="modal-edit-title">Editar</h2>
-    <input type="hidden" id="edit-type">
-    <input type="hidden" id="edit-key">
-    <div class="field"><label>Nombre *</label><input type="text" id="edit-nombre"></div>
-    <div class="field" id="edit-cat-wrap">
-      <label>Categoria</label>
-      <div class="pills" id="edit-cat-pills">
-        <button class="pill" data-cat="ingreso" onclick="selCatEdit(this)">+ Ingreso</button>
-        <button class="pill" data-cat="egreso" onclick="selCatEdit(this)">- Egreso</button>
-        <button class="pill" data-cat="otro" onclick="selCatEdit(this)">Mov. Interno</button>
-        <button class="pill" data-cat="activo_fijo" onclick="selCatEdit(this)">Activo Fijo</button>
-        <button class="pill" data-cat="pasivo" onclick="selCatEdit(this)">Pasivo</button>
-      </div>
-      <input type="hidden" id="edit-cat">
-    </div>
-    <div class="modal-foot"><button class="btn" onclick="closeMod('modal-edit')">Cancelar</button><button class="btn btn-prim" onclick="saveEdit()">Guardar</button></div>
-  </div>
-</div>
-
-<div id="toast"></div>
+<!-- Modals are already in the HTML before this point -->
 
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.min.js"></script>
@@ -642,7 +699,7 @@ setTimeout(function(){
 var S = {
   ejercicios:[], activeEj:null, records:{}, apertura:{},
   loans:[], customConcepts:[], customPagos:[], tarjetas:[],
-  baseConcepts:{}, basePagos:[]
+  baseConcepts:{}, basePagos:[], customIOLTypes:[]
 };
 var balView = 'bal';
 var selPago = '';
@@ -661,6 +718,9 @@ var CCK = '__CC__';
 var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
              'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 var INV_KEYS = ['Plazo Fijo','FCI','Criptos / IOL','StockBrokers'];
+var IOL_TYPES_DEFAULT = ['Acciones','CEDEARs','Bonos','ON','Criptomonedas','Cauciones','Dolar MEP / CCL','Otro'];
+function getIOLTypes(){ return (S.customIOLTypes||[]).length ? IOL_TYPES_DEFAULT.concat(S.customIOLTypes) : IOL_TYPES_DEFAULT; }
+var CURRENCIES = ['USD','EUR','BRL','CLP','UYU','GBP','CHF','CNY'];
 var BIENES_KEYS = ['Rodados','Inmuebles - LoteTdS III',
   'Casa Roldan - Obra 1 Etapa Quincho','Casa Roldan - Obra 2 Etapa Casa',
   'Percepciones Compra Dolares'];
@@ -982,7 +1042,7 @@ function fbSaveCfg() {
     ejercicios:S.ejercicios, activeEj:S.activeEj,
     customConcepts:S.customConcepts, customPagos:S.customPagos,
     tarjetas:S.tarjetas, baseConcepts:S.baseConcepts||{},
-    basePagos:S.basePagos||[], updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    basePagos:S.basePagos||[], customIOLTypes:S.customIOLTypes||[], updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){setSyncUI('online','Guardado');})
     .catch(function(e){setSyncUI('error',e.message);});
 }
@@ -1045,6 +1105,7 @@ function loadAll() {
       S.tarjetas = d.tarjetas||[];
       S.baseConcepts = d.baseConcepts||{};
       S.basePagos = d.basePagos||[];
+      S.customIOLTypes = d.customIOLTypes||[];
     }
     if (S.activeEj) {
       return fbLoadAper(S.activeEj).then(function(){
@@ -1261,16 +1322,27 @@ function onConceptSel(name) {
   if (cb) { cb.className = 'badge ' + info[0]; cb.textContent = info[1]; }
   if (cl) cl.textContent = info[2];
   var isFX = FX_CONCEPTS.indexOf(name) >= 0;
+  var isME = name.toLowerCase().indexOf('moneda') >= 0 || name.toLowerCase().indexOf('divisa') >= 0 || name.toLowerCase().indexOf('dolar') >= 0 || name.toLowerCase().indexOf('euro') >= 0 || name.toLowerCase().indexOf('compra me') >= 0 || name.toLowerCase().indexOf('venta me') >= 0;
+  var isFCI = name.toLowerCase().indexOf('fci') >= 0 || name.toLowerCase().indexOf('plazo fijo') >= 0 || name.toLowerCase().indexOf('constitucion') >= 0 || name.toLowerCase().indexOf('acreditacion') >= 0;
+  var isIOL = name.toLowerCase().indexOf('iol') >= 0 || name.toLowerCase().indexOf('cripto') >= 0 || name.toLowerCase().indexOf('stock') >= 0 || name.toLowerCase().indexOf('broker') >= 0;
+  // Show correct panel
+  var panels = ['sub-fx','sub-loan','sub-repay','sub-me','sub-fci','sub-iol'];
+  panels.forEach(function(id){var e=document.getElementById(id);if(e)e.className=e.className.replace(' vis','');});
   var sp = document.getElementById('sub-fx');
-  if (sp) sp.className = 'sub-panel sub-fx' + (isFX?' vis':'');
+  if(sp) sp.className = 'sub-panel sub-fx' + (isFX&&!isME?' vis':'');
   var slp = document.getElementById('sub-loan');
-  if (slp) slp.className = 'sub-panel sub-loan' + (name===LOAN_IN?' vis':'');
+  if(slp) slp.className = 'sub-panel sub-loan' + (name===LOAN_IN?' vis':'');
   var srp = document.getElementById('sub-repay');
-  if (srp) srp.className = 'sub-panel sub-repay' + (name===LOAN_OUT?' vis':'');
-  if (isFX) {
-    ['fx-usd','fx-tc','importe-inp'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
-    var fr = document.getElementById('fx-res'); if(fr)fr.classList.remove('vis');
-  }
+  if(srp) srp.className = 'sub-panel sub-repay' + (name===LOAN_OUT?' vis':'');
+  var sme = document.getElementById('sub-me');
+  if(sme) sme.className = 'sub-panel sub-me' + (isME?' vis':'');
+  var sfci = document.getElementById('sub-fci');
+  if(sfci) sfci.className = 'sub-panel sub-fci' + (isFCI&&!isME?' vis':'');
+  var siol = document.getElementById('sub-iol');
+  if(siol) siol.className = 'sub-panel sub-iol' + (isIOL?' vis':'');
+  if(isME) initMEPanel(name);
+  if(isFCI) initFCIPanel();
+  if(isIOL) initIOLPanel();
   if (name === LOAN_OUT) fillLoanSels();
   if (name === TR) selPago = '__TR__';
   else if (selPago === '__TR__') selPago = '';
@@ -1446,14 +1518,31 @@ function guardar() {
     if (fxUSD) ex.fxUSD = (ex.fxUSD||0) + fxUSD;
     fbSaveRec(ex); toast('Acumulado -> $'+fmt(ex.importe));
   } else {
-    var nr = {id:Date.now(),concepto:concepto,mes:mes,importe:importe,pago:pago,tarjeta:tarjeta,trOrigen:trO,trDestino:trD,obs:obs,cat:meta.cat,bankEffect:meta.bankEffect||0,inv:meta.inv||null,investEffect:meta.investEffect||0,bienKey:meta.bienKey||null,loanId:'',fxUSD:fxUSD,fxTC:fxTC,ts:Date.now()};
+    // Collect ME/FCI/IOL extra data
+    var meCurrency=(document.getElementById('me-currency')||{}).value||'';
+    var meQty=parseFloat((document.getElementById('me-qty')||{}).value)||0;
+    var meTc=parseFloat((document.getElementById('me-tc')||{}).value)||0;
+    var fciFondo=(document.getElementById('fci-fondo')||{}).value||'';
+    var fciCp=parseFloat((document.getElementById('fci-cp')||{}).value)||0;
+    var fciVl=parseFloat((document.getElementById('fci-vl')||{}).value)||0;
+    var iolType=(document.getElementById('iol-type-sel')||{}).value||'';
+    var iolName=(document.getElementById('iol-name')||{}).value||'';
+    var iolQty=parseFloat((document.getElementById('iol-qty')||{}).value)||0;
+    var iolCot=parseFloat((document.getElementById('iol-cot')||{}).value)||0;
+    var iolCurrency=(document.getElementById('iol-currency')||{}).value||'ARS';
+    var iolTc=parseFloat((document.getElementById('iol-tc')||{}).value)||0;
+    var nr = {id:Date.now(),concepto:concepto,mes:mes,importe:importe,pago:pago,tarjeta:tarjeta,trOrigen:trO,trDestino:trD,obs:obs,cat:meta.cat,bankEffect:meta.bankEffect||0,inv:meta.inv||null,investEffect:meta.investEffect||0,bienKey:meta.bienKey||null,loanId:'',fxUSD:fxUSD,fxTC:fxTC,
+      meCurrency:meCurrency,meQty:meQty,meTc:meTc,
+      fciFondo:fciFondo,fciCp:fciCp,fciVl:fciVl,
+      iolType:iolType,iolName:iolName,iolQty:iolQty,iolCot:iolCot,iolCurrency:iolCurrency,iolTc:iolTc,
+      ts:Date.now()};
     recs.unshift(nr); fbSaveRec(nr); toast('Guardado');
   }
   resetCarga();
 }
 
 function resetCarga() {
-  var ids = ['concepto-v','tarjeta-v','importe-inp','obs-inp','loan-cap','loan-cuotas','loan-gastos','repay-cap','repay-int','fx-usd','fx-tc'];
+  var ids = ['concepto-v','tarjeta-v','importe-inp','obs-inp','loan-cap','loan-cuotas','loan-gastos','repay-cap','repay-int','fx-usd','fx-tc','me-qty','me-tc','fci-fondo','fci-cp','fci-vl','iol-name','iol-qty','iol-cot','iol-tc'];
   ids.forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
   var cd = document.getElementById('cs-concepto-d');
   if (cd) { cd.textContent = 'Selecciona un concepto...'; cd.classList.remove('has'); }
@@ -1462,7 +1551,8 @@ function resetCarga() {
   var catd = document.getElementById('cat-display'); if(catd) catd.style.display='none';
   var msel = document.getElementById('mes-sel'); if(msel) msel.value='';
   ['tr-origen','tr-destino','loan-entidad-sel','repay-loan-sel'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
-  ['sub-fx','sub-loan','sub-repay','sub-cc','sub-tr'].forEach(function(id){var e=document.getElementById(id);if(e)e.className=e.className.replace(' vis','');});
+  ['sub-fx','sub-loan','sub-repay','sub-cc','sub-tr','sub-me','sub-fci','sub-iol'].forEach(function(id){var e=document.getElementById(id);if(e)e.className=e.className.replace(' vis','');});
+  ['me-res','fci-res','iol-res'].forEach(function(id){var e=document.getElementById(id);if(e)e.classList.remove('vis');});
   var fr=document.getElementById('fx-res');if(fr)fr.classList.remove('vis');
   var rr=document.getElementById('repay-res');if(rr)rr.classList.remove('vis');
   selPago = '';
@@ -1650,9 +1740,21 @@ function renderBalMain() {
   // ACTIVOS
   h += '<div class="bal-section"><div class="bal-hd bal-act"><span>ACTIVOS</span><span>'+sv(tA)+'</span></div>';
   h += '<div style="font-size:10px;color:var(--tx3);margin:0 0 6px;text-transform:uppercase;letter-spacing:.7px">Disponible</div><div class="bal-grid">';
-  Object.keys(bancos).forEach(function(k){var v=bancos[k]||0;var ini=aper['banco_'+k]||0;var isUSD=k.indexOf(' USD')>=0;h+='<div class="bal-card a-c"><div class="bal-name">'+k+'</div><div class="bal-val '+scl(v)+'">'+sv(v)+'</div>'+(ini?'<div class="bal-ini">Ini: $'+fmt(ini)+'</div>':'')+(isUSD?'<div class="bal-sub" style="color:var(--cyan)">USD</div>':'')+'</div>';});
+  // Filter: only show accounts with balance OR movements in this ejercicio
+  var recsThisEj = activeRecs();
+  function hasMovement(key, type) {
+    if(type==='banco') return recsThisEj.some(function(r){return r.pago===key||r.trOrigen===key||r.trDestino===key;});
+    if(type==='inv') return recsThisEj.some(function(r){return r.inv===key;});
+    if(type==='bien') return recsThisEj.some(function(r){return r.bienKey===key;});
+    return false;
+  }
+  Object.keys(bancos).forEach(function(k){var v=bancos[k]||0;var ini=aper['banco_'+k]||0;
+    if(Math.abs(v)<0.005&&!ini&&!hasMovement(k,'banco'))return; // skip empty
+    var isUSD=k.indexOf(' USD')>=0;h+='<div class="bal-card a-c"><div class="bal-name">'+k+'</div><div class="bal-val '+scl(v)+'">'+sv(v)+'</div>'+(ini?'<div class="bal-ini">Ini: $'+fmt(ini)+'</div>':'')+(isUSD?'<div class="bal-sub" style="color:var(--cyan)">USD</div>':'')+'</div>';});
   h += '</div><div style="font-size:10px;color:var(--tx3);margin:8px 0 6px;text-transform:uppercase;letter-spacing:.7px">Inversiones</div><div class="bal-grid">';
-  INV_KEYS.forEach(function(k){var v=inv[k]||0;var ini=aper['inv_'+k]||0;h+='<div class="bal-card a-c"><div class="bal-name">'+k+'</div><div class="bal-val '+scl(v)+'">'+sv(v)+'</div>'+(ini?'<div class="bal-ini">Ini: $'+fmt(ini)+'</div>':'')+'<div class="bal-sub" style="color:var(--purple)">Cartera</div></div>';});
+  INV_KEYS.forEach(function(k){var v=inv[k]||0;var ini=aper['inv_'+k]||0;
+    if(Math.abs(v)<0.005&&!ini&&!hasMovement(k,'inv'))return;
+    h+='<div class="bal-card a-c" style="cursor:pointer" onclick="drillInv('+JSON.stringify(k)+','+JSON.stringify(k)+',\"var(--purple)\")">'+'<div class="bal-name">'+k+'</div><div class="bal-val '+scl(v)+'">'+sv(v)+'</div>'+(ini?'<div class="bal-ini">Ini: $'+fmt(ini)+'</div>':'')+'<div class="bal-sub" style="color:var(--purple)">Cartera</div></div>';});
   // USD Efectivo
   var usdP=c.usdEfectivoPesos||0; var usdU=c.usdEfectivoUSD||0;
   h+='<div class="bal-card a-c" style="cursor:pointer;border-left-color:var(--gold)" onclick="drillUSD()">'+
@@ -1662,7 +1764,9 @@ function renderBalMain() {
     '<div class="bal-sub" style="color:var(--gold)">Ver detalle ▶</div></div>';
   tI+=usdP; tA=tB+tI+tBi;
   h += '</div><div style="font-size:10px;color:var(--tx3);margin:8px 0 6px;text-transform:uppercase;letter-spacing:.7px">Bienes</div><div class="bal-grid">';
-  BIENES_KEYS.forEach(function(k){var v=bienes[k]||0;h+='<div class="bal-card a-c"><div class="bal-name">'+k+'</div><div class="bal-val '+scl(v)+'">'+sv(v)+'</div></div>';});
+  BIENES_KEYS.forEach(function(k){var v=bienes[k]||0;
+    if(Math.abs(v)<0.005&&!hasMovement(k,'bien'))return;
+    h+='<div class="bal-card a-c"><div class="bal-name">'+k+'</div><div class="bal-val '+scl(v)+'">'+sv(v)+'</div></div>';});
   h += '</div><div class="bal-total bt-act"><span>Total Activos</span><span>'+sv(tA)+'</span></div></div>';
   // PASIVOS
   h += '<div class="bal-section"><div class="bal-hd bal-pas"><span>PASIVOS</span><span>'+sv(tP)+'</span></div><div class="bal-grid">';
@@ -2281,6 +2385,190 @@ function drillUSD() {
   if(!recs.length)h+='<p style="color:var(--tx3);font-size:12px;margin-top:10px">Sin movimientos de dólares en efectivo en este ejercicio.</p>';
   bc.innerHTML=h;
 }
+
+function initMEPanel(conceptName) {
+  var isSale = (conceptName||'').toLowerCase().indexOf('venta') >= 0;
+  var mpanel = document.getElementById('sub-me'); if(!mpanel)return;
+  // Determine direction label
+  var dir = isSale ? 'Vendiste' : 'Compraste';
+  document.getElementById('me-dir-label').textContent = dir;
+}
+function calcME() {
+  var qty = parseFloat((document.getElementById('me-qty')||{}).value)||0;
+  var tc  = parseFloat((document.getElementById('me-tc')||{}).value)||0;
+  var res = document.getElementById('me-res');
+  var imp = document.getElementById('importe-inp');
+  if(qty>0&&tc>0){
+    var total=qty*tc;
+    if(res){res.textContent=qty.toFixed(2)+' '+((document.getElementById('me-currency')||{}).value||'USD')+' x $'+fmt(tc)+' = $'+fmt(total);res.classList.add('vis');}
+    if(imp)imp.value=total.toFixed(2);
+  } else { if(res)res.classList.remove('vis'); }
+}
+
+function initFCIPanel() {
+  // Nothing special needed on init
+}
+function calcFCI() {
+  var cp = parseFloat((document.getElementById('fci-cp')||{}).value)||0;
+  var vl = parseFloat((document.getElementById('fci-vl')||{}).value)||0;
+  var res = document.getElementById('fci-res');
+  var imp = document.getElementById('importe-inp');
+  if(cp>0&&vl>0){
+    var total=cp*vl;
+    if(res){res.textContent=cp.toFixed(4)+' cuotas x $'+fmt(vl)+' = $'+fmt(total);res.classList.add('vis');}
+    if(imp)imp.value=total.toFixed(2);
+  } else { if(res)res.classList.remove('vis'); }
+}
+
+function initIOLPanel() {
+  var sel = document.getElementById('iol-type-sel'); if(!sel)return;
+  var types = getIOLTypes();
+  sel.innerHTML = '<option value="">-- Tipo --</option>' +
+    types.map(function(t){return '<option>'+t+'</option>';}).join('') +
+    '<option value="__NEW__">+ Agregar tipo nuevo...</option>';
+}
+function onIOLTypeChange() {
+  var sel = document.getElementById('iol-type-sel'); if(!sel)return;
+  if(sel.value==='__NEW__'){
+    var nv = prompt('Nombre del nuevo tipo de inversion:');
+    if(nv&&nv.trim()){
+      if(!S.customIOLTypes)S.customIOLTypes=[];
+      S.customIOLTypes.push(nv.trim());
+      fbSaveCfg();
+      initIOLPanel();
+      sel.value=nv.trim();
+    } else { sel.value=''; }
+  }
+}
+function calcIOL() {
+  var qty = parseFloat((document.getElementById('iol-qty')||{}).value)||0;
+  var cot = parseFloat((document.getElementById('iol-cot')||{}).value)||0;
+  var tc  = parseFloat((document.getElementById('iol-tc')||{}).value)||0;
+  var isUSD = (document.getElementById('iol-currency')||{}).value==='USD';
+  var res = document.getElementById('iol-res');
+  var imp = document.getElementById('importe-inp');
+  if(qty>0&&cot>0){
+    var subtotal=qty*cot;
+    var total=isUSD&&tc>0?subtotal*tc:subtotal;
+    var txt=qty.toFixed(4)+' x '+fmt(cot)+(isUSD?' USD':'');
+    if(isUSD&&tc>0)txt+=' x $'+fmt(tc)+' TC';
+    txt+=' = $'+fmt(total);
+    if(res){res.textContent=txt;res.classList.add('vis');}
+    if(imp)imp.value=total.toFixed(2);
+  } else { if(res)res.classList.remove('vis'); }
+}
+
+function drillInv(invKey, label, color) {
+  var bc = document.getElementById('bal-content'); if(!bc)return;
+  var recs = activeRecs().filter(function(r){return r.inv===invKey;});
+  var total = 0;
+  var h = '<div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">';
+  h += '<button class="btn btn-sm" onclick="safeRenderBalance()">&#8592; Volver</button>';
+  h += '<span style="font-family:var(--hf);font-size:16px;font-weight:700;color:'+color+'">'+label+'</span>';
+  h += '</div>';
+  h += '<div class="mwrap"><table><thead><tr><th>Mes</th><th>Concepto</th><th>Detalle</th><th>Importe</th></tr></thead><tbody>';
+  recs.forEach(function(r){
+    var isIn = r.investEffect > 0;
+    total += (r.investEffect||1) * r.importe;
+    var detalle = '';
+    if(r.fciFondo) detalle += r.fciFondo;
+    if(r.fciCp) detalle += ' '+r.fciCp.toFixed(4)+' cp @ $'+fmt(r.fciVl||0);
+    if(r.iolName) detalle += r.iolType?' ['+r.iolType+'] '+r.iolName:r.iolName;
+    if(r.iolQty) detalle += ' '+r.iolQty.toFixed(4)+' x '+fmt(r.iolCot||0)+(r.iolCurrency==='USD'?' USD':'');
+    h += '<tr><td>'+r.mes+'</td><td style="font-size:12px;color:var(--tx2)">'+r.concepto+'</td>';
+    h += '<td style="font-size:11px;color:var(--tx3)">'+detalle+'</td>';
+    h += '<td class="'+(isIn?'td-pos':'td-neg')+' td-b">'+(isIn?'+':'-')+'$'+fmt(r.importe)+'</td></tr>';
+  });
+  h += '<tr class="tf"><td colspan="3">Saldo acumulado</td><td class="'+(total>=0?'td-pos':'td-neg')+' td-b">'+sv(total)+'</td></tr>';
+  h += '</tbody></table></div>';
+  if(!recs.length) h += '<p style="color:var(--tx3);font-size:12px;margin-top:10px">Sin movimientos en este ejercicio.</p>';
+  bc.innerHTML = h;
+}
+
+function calcValFCI() {
+  var cp=parseFloat((document.getElementById('val-fci-cp')||{}).value)||0;
+  var vl=parseFloat((document.getElementById('val-fci-vl')||{}).value)||0;
+  var prev=document.getElementById('val-fci-prev');
+  if(!prev)return;
+  if(!cp||!vl){prev.style.display='none';return;}
+  var fondo=(document.getElementById('val-fci-fondo')||{}).value||'';
+  var recs=activeRecs().filter(function(r){return r.inv&&(r.inv==='FCI');});
+  var histPesos=recs.reduce(function(s,r){return s+((r.investEffect||1)*r.importe);},0);
+  var valorActual=cp*vl;
+  var diff=valorActual-histPesos;
+  var isGain=diff>=0;
+  prev.style.display='block';
+  prev.style.background=isGain?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)';
+  prev.style.border='1px solid '+(isGain?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)');
+  prev.style.color=isGain?'var(--accent)':'#f87171';
+  prev.textContent=(isGain?'Ganancia':'Perdida')+': $'+fmt(Math.abs(diff))+' (Actual: $'+fmt(valorActual)+' vs Hist: $'+fmt(histPesos)+')';
+  prev.dataset.diff=diff;
+}
+
+function aplicarValFCI() {
+  if(!S.activeEj)return toast('Sin ejercicio activo',true);
+  var mes=(document.getElementById('val-fci-mes')||{}).value||'';
+  var fondo=(document.getElementById('val-fci-fondo')||{}).value||'';
+  var prev=document.getElementById('val-fci-prev');
+  var diff=parseFloat((prev&&prev.dataset.diff)||0);
+  if(!mes)return toast('Selecciona el mes',true);
+  if(Math.abs(diff)<0.01)return toast('La diferencia es cero');
+  var isGain=diff>=0;
+  if(!confirm((isGain?'Registrar GANANCIA':'Registrar PERDIDA')+' por valuacion FCI de $'+fmt(Math.abs(diff))+' en '+mes+'?'))return;
+  var r={id:Date.now(),concepto:'Intereses FCI',mes:mes,importe:Math.abs(diff),
+    pago:fondo||'FCI',tarjeta:'',trOrigen:'',trDestino:'',obs:'Valuacion FCI'+(fondo?' - '+fondo:''),
+    cat:isGain?'ingreso':'egreso',bankEffect:0,inv:'FCI',investEffect:isGain?1:-1,
+    bienKey:null,loanId:'',fxUSD:0,fxTC:0,fciFondo:fondo,ts:Date.now()};
+  if(!S.records[S.activeEj])S.records[S.activeEj]=[];
+  S.records[S.activeEj].unshift(r);
+  fbSaveRec(r).then(function(){
+    document.getElementById('val-fci-mes').value='';
+    document.getElementById('val-fci-prev').style.display='none';
+    toast('Valuacion FCI registrada');
+  });
+}
+
+function calcValIOL() {
+  var qty=parseFloat((document.getElementById('val-iol-qty')||{}).value)||0;
+  var cot=parseFloat((document.getElementById('val-iol-cot')||{}).value)||0;
+  var tc=parseFloat((document.getElementById('val-iol-tc')||{}).value)||0;
+  var hist=parseFloat((document.getElementById('val-iol-hist')||{}).value)||0;
+  var prev=document.getElementById('val-iol-prev');
+  if(!prev)return;
+  if(!qty||!cot){prev.style.display='none';return;}
+  var valorActual=tc>0?qty*cot*tc:qty*cot;
+  var diff=valorActual-hist;
+  var isGain=diff>=0;
+  prev.style.display='block';
+  prev.style.background=isGain?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)';
+  prev.style.border='1px solid '+(isGain?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)');
+  prev.style.color=isGain?'var(--accent)':'#f87171';
+  prev.textContent=(isGain?'Ganancia':'Perdida')+': $'+fmt(Math.abs(diff))+' (Actual: $'+fmt(valorActual)+' vs Hist: $'+fmt(hist)+')';
+  prev.dataset.diff=diff;
+}
+
+function aplicarValIOL() {
+  if(!S.activeEj)return toast('Sin ejercicio activo',true);
+  var mes=(document.getElementById('val-iol-mes')||{}).value||'';
+  var name=(document.getElementById('val-iol-name')||{}).value||'';
+  var prev=document.getElementById('val-iol-prev');
+  var diff=parseFloat((prev&&prev.dataset.diff)||0);
+  if(!mes)return toast('Selecciona el mes',true);
+  if(Math.abs(diff)<0.01)return toast('La diferencia es cero');
+  var isGain=diff>=0;
+  if(!confirm((isGain?'Registrar GANANCIA':'Registrar PERDIDA')+' de $'+fmt(Math.abs(diff))+' en '+mes+'?'))return;
+  var r={id:Date.now(),concepto:'Resultado IOL',mes:mes,importe:Math.abs(diff),
+    pago:name||'IOL',tarjeta:'',trOrigen:'',trDestino:'',obs:'Valuacion IOL'+(name?' - '+name:''),
+    cat:isGain?'ingreso':'egreso',bankEffect:0,inv:'Criptos / IOL',investEffect:isGain?1:-1,
+    bienKey:null,loanId:'',fxUSD:0,fxTC:0,iolName:name,ts:Date.now()};
+  if(!S.records[S.activeEj])S.records[S.activeEj]=[];
+  S.records[S.activeEj].unshift(r);
+  fbSaveRec(r).then(function(){
+    document.getElementById('val-iol-mes').value='';
+    document.getElementById('val-iol-prev').style.display='none';
+    toast('Valuacion IOL registrada');
+  });
+}
 function exportData() {
   var blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   var url=URL.createObjectURL(blob);
@@ -2333,9 +2621,186 @@ try {
   }, 100);
 }
 
+
+function initIOLPanel() {
+  var sel = document.getElementById('iol-type-sel'); if(!sel)return;
+  var types = getIOLTypes();
+  sel.innerHTML = '<option value="">-- Tipo --</option>' +
+    types.map(function(t){return '<option>'+t+'</option>';}).join('') +
+    '<option value="__NEW__">+ Agregar tipo nuevo...</option>';
+}
+function onIOLTypeChange() {
+  var sel = document.getElementById('iol-type-sel'); if(!sel)return;
+  if(sel.value==='__NEW__'){
+    var nv = prompt('Nombre del nuevo tipo de inversion:');
+    if(nv&&nv.trim()){
+      if(!S.customIOLTypes)S.customIOLTypes=[];
+      S.customIOLTypes.push(nv.trim());
+      fbSaveCfg();
+      initIOLPanel();
+      sel.value=nv.trim();
+    } else { sel.value=''; }
+  }
+}
+function calcIOL() {
+  var qty = parseFloat((document.getElementById('iol-qty')||{}).value)||0;
+  var cot = parseFloat((document.getElementById('iol-cot')||{}).value)||0;
+  var tc  = parseFloat((document.getElementById('iol-tc')||{}).value)||0;
+  var isUSD = (document.getElementById('iol-currency')||{}).value==='USD';
+  var res = document.getElementById('iol-res');
+  var imp = document.getElementById('importe-inp');
+  if(qty>0&&cot>0){
+    var subtotal=qty*cot;
+    var total=isUSD&&tc>0?subtotal*tc:subtotal;
+    var txt=qty.toFixed(4)+' x '+fmt(cot)+(isUSD?' USD':'');
+    if(isUSD&&tc>0)txt+=' x $'+fmt(tc)+' TC';
+    txt+=' = $'+fmt(total);
+    if(res){res.textContent=txt;res.classList.add('vis');}
+    if(imp)imp.value=total.toFixed(2);
+  } else { if(res)res.classList.remove('vis'); }
+}
+
+function calcValFCI() {
+  var cp=parseFloat((document.getElementById('val-fci-cp')||{}).value)||0;
+  var vl=parseFloat((document.getElementById('val-fci-vl')||{}).value)||0;
+  var prev=document.getElementById('val-fci-prev');
+  if(!prev)return;
+  if(!cp||!vl){prev.style.display='none';return;}
+  var fondo=(document.getElementById('val-fci-fondo')||{}).value||'';
+  var recs=activeRecs().filter(function(r){return r.inv&&(r.inv==='FCI');});
+  var histPesos=recs.reduce(function(s,r){return s+((r.investEffect||1)*r.importe);},0);
+  var valorActual=cp*vl;
+  var diff=valorActual-histPesos;
+  var isGain=diff>=0;
+  prev.style.display='block';
+  prev.style.background=isGain?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)';
+  prev.style.border='1px solid '+(isGain?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)');
+  prev.style.color=isGain?'var(--accent)':'#f87171';
+  prev.textContent=(isGain?'Ganancia':'Perdida')+': $'+fmt(Math.abs(diff))+' (Actual: $'+fmt(valorActual)+' vs Hist: $'+fmt(histPesos)+')';
+  prev.dataset.diff=diff;
+}
+
+function aplicarValFCI() {
+  if(!S.activeEj)return toast('Sin ejercicio activo',true);
+  var mes=(document.getElementById('val-fci-mes')||{}).value||'';
+  var fondo=(document.getElementById('val-fci-fondo')||{}).value||'';
+  var prev=document.getElementById('val-fci-prev');
+  var diff=parseFloat((prev&&prev.dataset.diff)||0);
+  if(!mes)return toast('Selecciona el mes',true);
+  if(Math.abs(diff)<0.01)return toast('La diferencia es cero');
+  var isGain=diff>=0;
+  if(!confirm((isGain?'Registrar GANANCIA':'Registrar PERDIDA')+' por valuacion FCI de $'+fmt(Math.abs(diff))+' en '+mes+'?'))return;
+  var r={id:Date.now(),concepto:'Intereses FCI',mes:mes,importe:Math.abs(diff),
+    pago:fondo||'FCI',tarjeta:'',trOrigen:'',trDestino:'',obs:'Valuacion FCI'+(fondo?' - '+fondo:''),
+    cat:isGain?'ingreso':'egreso',bankEffect:0,inv:'FCI',investEffect:isGain?1:-1,
+    bienKey:null,loanId:'',fxUSD:0,fxTC:0,fciFondo:fondo,ts:Date.now()};
+  if(!S.records[S.activeEj])S.records[S.activeEj]=[];
+  S.records[S.activeEj].unshift(r);
+  fbSaveRec(r).then(function(){
+    document.getElementById('val-fci-mes').value='';
+    document.getElementById('val-fci-prev').style.display='none';
+    toast('Valuacion FCI registrada');
+  });
+}
+
+function calcValIOL() {
+  var qty=parseFloat((document.getElementById('val-iol-qty')||{}).value)||0;
+  var cot=parseFloat((document.getElementById('val-iol-cot')||{}).value)||0;
+  var tc=parseFloat((document.getElementById('val-iol-tc')||{}).value)||0;
+  var hist=parseFloat((document.getElementById('val-iol-hist')||{}).value)||0;
+  var prev=document.getElementById('val-iol-prev');
+  if(!prev)return;
+  if(!qty||!cot){prev.style.display='none';return;}
+  var valorActual=tc>0?qty*cot*tc:qty*cot;
+  var diff=valorActual-hist;
+  var isGain=diff>=0;
+  prev.style.display='block';
+  prev.style.background=isGain?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)';
+  prev.style.border='1px solid '+(isGain?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)');
+  prev.style.color=isGain?'var(--accent)':'#f87171';
+  prev.textContent=(isGain?'Ganancia':'Perdida')+': $'+fmt(Math.abs(diff))+' (Actual: $'+fmt(valorActual)+' vs Hist: $'+fmt(hist)+')';
+  prev.dataset.diff=diff;
+}
+
+function aplicarValIOL() {
+  if(!S.activeEj)return toast('Sin ejercicio activo',true);
+  var mes=(document.getElementById('val-iol-mes')||{}).value||'';
+  var name=(document.getElementById('val-iol-name')||{}).value||'';
+  var prev=document.getElementById('val-iol-prev');
+  var diff=parseFloat((prev&&prev.dataset.diff)||0);
+  if(!mes)return toast('Selecciona el mes',true);
+  if(Math.abs(diff)<0.01)return toast('La diferencia es cero');
+  var isGain=diff>=0;
+  if(!confirm((isGain?'Registrar GANANCIA':'Registrar PERDIDA')+' de $'+fmt(Math.abs(diff))+' en '+mes+'?'))return;
+  var r={id:Date.now(),concepto:'Resultado IOL',mes:mes,importe:Math.abs(diff),
+    pago:name||'IOL',tarjeta:'',trOrigen:'',trDestino:'',obs:'Valuacion IOL'+(name?' - '+name:''),
+    cat:isGain?'ingreso':'egreso',bankEffect:0,inv:'Criptos / IOL',investEffect:isGain?1:-1,
+    bienKey:null,loanId:'',fxUSD:0,fxTC:0,iolName:name,ts:Date.now()};
+  if(!S.records[S.activeEj])S.records[S.activeEj]=[];
+  S.records[S.activeEj].unshift(r);
+  fbSaveRec(r).then(function(){
+    document.getElementById('val-iol-mes').value='';
+    document.getElementById('val-iol-prev').style.display='none';
+    toast('Valuacion IOL registrada');
+  });
+}
+function exportData() {
+  var blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='finanzas_backup_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();URL.revokeObjectURL(url);toast('Exportado');
+}
+function clearEj() {
+  if(!S.activeEj)return toast('Sin ejercicio activo',true);
+  var ej=(S.ejercicios||[]).filter(function(e){return e.id===S.activeEj;})[0];
+  if(!confirm('Borrar TODOS los registros de '+ej.year+'?'))return;
+  var recs=(S.records[S.activeEj]||[]).slice();
+  S.records[S.activeEj]=[];
+  Promise.all(recs.map(function(r){return fbDelRec(String(S.activeEj),String(r.id));})).then(function(){renderRecs();toast('Eliminados');});
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+var toastT;
+function toast(msg, err) {
+  var el=document.getElementById('toast');
+  if(!el)return;
+  el.textContent=msg;el.className='on'+(err?' err':'');
+  clearTimeout(toastT);
+  toastT=setTimeout(function(){el.className='';},3000);
+}
+
+// ============================================================
+// OFFLINE
+// ============================================================
+window.addEventListener('online',function(){document.getElementById('offline-banner').style.display='none';setSyncUI('syncing','Reconectando...');});
+window.addEventListener('offline',function(){document.getElementById('offline-banner').style.display='block';setSyncUI('error','Sin conexion');});
+if(!navigator.onLine)document.getElementById('offline-banner').style.display='block';
+
+// ============================================================
+// INIT
+// ============================================================
+try {
+  initFirebase();
+  loadAll();
+} catch(e) {
+  console.error('Firebase init failed:', e);
+  setSyncUI('error', 'Firebase no disponible - modo sin conexion');
+  // Start app without Firebase
+  setTimeout(function(){
+    var ld = document.getElementById('loading');
+    if(ld) { ld.classList.add('hidden'); ld.style.display='none'; }
+    updateSBEj();
+    safeRenderBalance();
+  }, 100);
+}
+
+
 </script>
 
 <script>
+
 if('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('/sw.js').then(function(reg) {
@@ -2345,6 +2810,6 @@ if('serviceWorker' in navigator) {
     });
   });
 }
-</script>
+
 </body>
 </html>
