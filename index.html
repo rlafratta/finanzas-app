@@ -2322,6 +2322,7 @@ function renderBalMain() {
   var bc = document.getElementById('bal-content');
   var recs = activeRecs();
   var aper = getAper();
+  var aper2 = aper; // alias used throughout
   var c = computeSaldos(recs, aper);
   var bancos=c.bancos, inv=c.inversiones, bienes=c.bienes, ls=c.loanSaldos, ing=c.ingPuro, eg=c.egPuro;
   var tB=0,tI=0,tBi=0,tP=0;
@@ -2342,7 +2343,7 @@ function renderBalMain() {
   });
   Object.keys(bienes).forEach(function(k){tBi+=bienes[k]||0;});
   // Add ME from apertura
-  var aper2=getAper();
+  // aper2 already declared above
   CURRENCIES.forEach(function(cur){
     var p=aper2['me_pesos_'+cur]||0;
     var qtyMov=0,pesosMov=0;
@@ -2381,14 +2382,24 @@ function renderBalMain() {
     return false;
   }
   Object.keys(bancos).forEach(function(k){var v=bancos[k]||0;var ini=aper['banco_'+k]||0;
-    if(Math.abs(v)<0.005&&!ini&&!hasMovement(k,'banco'))return; // skip empty
-    var isUSD=k.indexOf(' USD')>=0;h+='<div class="bal-card a-c"><div class="bal-name">'+k+'</div><div class="bal-val '+scl(v)+'">'+sv(v)+'</div>'+(ini?'<div class="bal-ini">Ini: $'+fmt(ini)+'</div>':'')+(isUSD?'<div class="bal-sub" style="color:var(--cyan)">USD</div>':'')+'</div>';});
+    var isUSD=k.indexOf(' USD')>=0;
+    var bBase2=k.replace(' USD','').replace(' EUR','');
+    var bLnk2=(BANK_LINKS[k]&&BANK_LINKS[k].web)||(BANK_LINKS[bBase2]&&BANK_LINKS[bBase2].web)||'';
+    var bId2='bc_'+k.replace(/[^a-z0-9]/gi,'_');
+    var bArrow=bLnk2?'<span style="font-size:10px;color:var(--accent);margin-left:3px">&#8599;</span>':'';
+    h+='<div class="bal-card a-c" id="'+bId2+'"'+(bLnk2?' style="cursor:pointer"':'')+'>'+
+      '<div class="bal-name">'+k+bArrow+'</div>'+
+      '<div class="bal-val '+scl(v)+'">'+sv(v)+'</div>'+
+      (ini?'<div class="bal-ini">Ini: $'+fmt(ini)+'</div>':'')+
+      (isUSD?'<div class="bal-sub" style="color:var(--cyan)">USD</div>':'')+
+      '</div>';
+  });
   h += '</div><div style="font-size:10px;color:var(--tx3);margin:8px 0 6px;text-transform:uppercase;letter-spacing:.7px">Inversiones</div><div class="bal-grid">';
   INV_KEYS.forEach(function(k){var v=inv[k]||0;var ini=aper['inv_'+k]||0;
     if(Math.abs(v)<0.005&&!ini&&!hasMovement(k,'inv'))return;
     h+='<div class="bal-card a-c" style="cursor:pointer" onclick="drillInv('+JSON.stringify(k)+','+JSON.stringify(k)+',\"var(--purple)\")">'+'<div class="bal-name">'+k+'</div><div class="bal-val '+scl(v)+'">'+sv(v)+'</div>'+(ini?'<div class="bal-ini">Ini: $'+fmt(ini)+'</div>':'')+'<div class="bal-sub" style="color:var(--purple)">Cartera</div></div>';});
   // ME cards (USD, EUR) from apertura + records
-  var aper2=getAper();
+  // aper2 already declared above
   CURRENCIES.forEach(function(cur){
     var qtyAper=aper2['me_qty_'+cur]||0;
     var pesosAper=aper2['me_pesos_'+cur]||0;
@@ -2503,26 +2514,14 @@ function renderBalMain() {
       var meCard=document.getElementById('bal-me-'+cur);
       if(meCard)meCard.onclick=(function(c){return function(){drillME(c);};})(cur);
     });
-    // Add bank homebanking links
+    // Add bank homebanking links via id
     Object.keys(bancos).forEach(function(k){
-      var bInfo=BANK_LINKS[k]||BANK_LINKS[k.replace(' USD','').replace(' EUR','')]||null;
-      if(!bInfo||!bInfo.web)return;
-      var v=bancos[k]||0;
-      var ini=aper2['banco_'+k]||0;
-      if(Math.abs(v)<0.005&&!ini&&!hasMovement(k,'banco'))return;
-      // Find the card and add link indicator + onclick
-      var cards=bc.querySelectorAll('.bal-card');
-      cards.forEach(function(card){
-        var nm=card.querySelector('.bal-name');
-        if(nm&&nm.textContent.trim()===k){
-          card.style.cursor='pointer';
-          var lnk=document.createElement('span');
-          lnk.style.cssText='font-size:9px;color:var(--accent);margin-left:4px;opacity:.8';
-          lnk.innerHTML='&#8599;';
-          nm.appendChild(lnk);
-          card.onclick=(function(name){return function(){openBankLink(name);};})(k);
-        }
-      });
+      var bBase=k.replace(' USD','').replace(' EUR','');
+      var bLnk=(BANK_LINKS[k]&&BANK_LINKS[k].web)||(BANK_LINKS[bBase]&&BANK_LINKS[bBase].web)||'';
+      if(!bLnk)return;
+      var bId='bc_'+k.replace(/[^a-z0-9]/gi,'_');
+      var card=document.getElementById(bId);
+      if(card)card.onclick=(function(name){return function(){openBankLink(name);};})(k);
     });
   }
 }
