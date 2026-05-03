@@ -765,6 +765,54 @@ setTimeout(function(){
 
 <!-- Modals are already in the HTML before this point -->
 
+<div id="toast"></div>
+
+<div class="modal-bg" id="modal-ej">
+  <div class="modal">
+    <h2 id="modal-ej-title">Nuevo Ejercicio</h2>
+    <input type="hidden" id="modal-ej-id">
+    <div class="field"><label>Ano *</label><input type="number" id="ej-year" placeholder="2026" min="2000" max="2100" inputmode="numeric"></div>
+    <div class="field"><label>Descripcion</label><input type="text" id="ej-desc" placeholder="Ej: Ejercicio fiscal 2026"></div>
+    <div class="modal-foot"><button class="btn" onclick="closeMod('modal-ej')">Cancelar</button><button class="btn btn-prim" onclick="saveEj()">Guardar</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-loan">
+  <div class="modal">
+    <h2 id="modal-loan-title">Nuevo Prestamo</h2>
+    <input type="hidden" id="modal-loan-id">
+    <div class="field"><label>Entidad *</label><input type="text" id="loan-nombre" placeholder="Ej: Banco Nacion..."></div>
+    <div class="row2">
+      <div class="field"><label>Capital total *</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="loan-capital" placeholder="0.00" step="0.01" min="0" inputmode="decimal"></div></div>
+      <div class="field"><label>Cuotas</label><input type="number" id="loan-cuotas-m" placeholder="12" min="1" inputmode="numeric"></div>
+    </div>
+    <div class="field"><label>Fecha otorgamiento</label><input type="date" id="loan-fecha"></div>
+    <div class="field"><label>Observaciones</label><textarea id="loan-obs" rows="2" placeholder="Tasa, condiciones..."></textarea></div>
+    <div class="modal-foot"><button class="btn" onclick="closeMod('modal-loan')">Cancelar</button><button class="btn btn-prim" onclick="saveLoan()">Guardar</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-edit">
+  <div class="modal">
+    <h2 id="modal-edit-title">Editar</h2>
+    <input type="hidden" id="edit-type">
+    <input type="hidden" id="edit-key">
+    <div class="field"><label>Nombre *</label><input type="text" id="edit-nombre"></div>
+    <div class="field" id="edit-cat-wrap">
+      <label>Categoria</label>
+      <div class="pills" id="edit-cat-pills">
+        <button class="pill" data-cat="ingreso" onclick="selCatEdit(this)">+ Ingreso</button>
+        <button class="pill" data-cat="egreso" onclick="selCatEdit(this)">- Egreso</button>
+        <button class="pill" data-cat="otro" onclick="selCatEdit(this)">Mov. Interno</button>
+        <button class="pill" data-cat="activo_fijo" onclick="selCatEdit(this)">Activo Fijo</button>
+        <button class="pill" data-cat="pasivo" onclick="selCatEdit(this)">Pasivo</button>
+      </div>
+      <input type="hidden" id="edit-cat">
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeMod('modal-edit')">Cancelar</button><button class="btn btn-prim" onclick="saveEdit()">Guardar</button></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.min.js"></script>
 
@@ -2159,6 +2207,27 @@ function renderBalMain() {
   Object.keys(bancos).forEach(function(k){tB+=bancos[k]||0;});
   Object.keys(inv).forEach(function(k){tI+=inv[k]||0;});
   Object.keys(bienes).forEach(function(k){tBi+=bienes[k]||0;});
+  // Add ME from apertura
+  var aper2=getAper();
+  CURRENCIES.forEach(function(cur){
+    var p=aper2['me_pesos_'+cur]||0;
+    var qtyMov=0,pesosMov=0;
+    recs.forEach(function(r){
+      if(r.meCurrency!==cur)return;
+      var isC=(r.concepto||'').toLowerCase().indexOf('compra')>=0;
+      if(isC){pesosMov+=r.importe;}else{pesosMov-=r.importe;}
+    });
+    tI+=p+pesosMov;
+  });
+  // Add rodados and inmuebles from S items
+  var totalRod=0;
+  (S.rodados||[]).forEach(function(item){totalRod+=aper2['rod_'+item.id]||0;});
+  totalRod+=(bienes['Rodados']||0);
+  var totalInm=0;
+  (S.inmuebles||[]).forEach(function(item){totalInm+=aper2['inm_'+item.id]||0;});
+  var shownBienes=['Rodados','Inmuebles - LoteTdS III','Casa Roldan - Obra 1 Etapa Quincho','Casa Roldan - Obra 2 Etapa Casa'];
+  shownBienes.forEach(function(k){tBi-=(bienes[k]||0);}); // remove old keys already counted
+  tBi+=totalRod+totalInm;
   var tA = tB+tI+tBi;
   var lc = (S.loans||[]).map(function(l){var s=(ls[String(l.id)]||0);tP+=s;return{l:l,s:s};});
   var pnA = aper.pn_resultados||0;
@@ -2167,7 +2236,7 @@ function renderBalMain() {
   var ok = Math.abs(diff) < 1;
   var h = '<div class="val-bar '+(ok?'val-ok':'val-err')+'"><span>'+(ok?'Balance cuadrado':'Diferencia: $'+fmt(Math.abs(diff)))+'</span></div>';
   // ACTIVOS
-  h += '<div class="bal-section"><div class="bal-hd bal-act"><span>ACTIVOS</span><span>'+sv(tA)+'</span></div>';
+  h += '<div class="bal-section"><div class="bal-hd bal-act"><span>TOTAL ACTIVOS</span><span>'+sv(tA)+'</span></div>';
   h += '<div style="font-size:10px;color:var(--tx3);margin:0 0 6px;text-transform:uppercase;letter-spacing:.7px">Disponible</div><div class="bal-grid">';
   // Filter: only show accounts with balance OR movements in this ejercicio
   var recsThisEj = activeRecs();
@@ -2208,14 +2277,12 @@ function renderBalMain() {
       '<div class="bal-ini">'+totalQty.toFixed(2)+' '+cur+'</div>'+
       '<div class="bal-sub" style="color:var(--gold)">Ver detalle ▶</div></div>';
   });
-  tA=tB+tI+tBi;
   h += '</div><div style="font-size:10px;color:var(--tx3);margin:8px 0 6px;text-transform:uppercase;letter-spacing:.7px">Bienes</div><div class="bal-grid">';
   // Rodados grouped
   var totalRod=0;
   (S.rodados||[]).forEach(function(item){totalRod+=aper['rod_'+item.id]||0;});
   totalRod+=(bienes['Rodados']||0);
   if(totalRod>0.005){
-    tBi+=totalRod;
     h+='<div class="bal-card a-c" style="cursor:pointer;border-left-color:var(--accent)" id="bal-rod-card">';
     h+='<div class="bal-name">Rodados</div><div class="bal-val '+scl(totalRod)+'">'+sv(totalRod)+'</div>';
     h+='<div class="bal-sub" style="color:var(--accent)">'+(S.rodados||[]).length+' vehículo(s) ▶</div></div>';
@@ -2225,7 +2292,6 @@ function renderBalMain() {
   (S.inmuebles||[]).forEach(function(item){totalInm+=aper['inm_'+item.id]||0;});
   totalInm+=(bienes['Inmuebles - LoteTdS III']||0)+(bienes['Casa Roldan - Obra 1 Etapa Quincho']||0)+(bienes['Casa Roldan - Obra 2 Etapa Casa']||0);
   if(totalInm>0.005){
-    tBi+=totalInm;
     h+='<div class="bal-card a-c" style="cursor:pointer;border-left-color:var(--accent)" id="bal-inm-card">';
     h+='<div class="bal-name">Inmuebles</div><div class="bal-val '+scl(totalInm)+'">'+sv(totalInm)+'</div>';
     h+='<div class="bal-sub" style="color:var(--accent)">'+(S.inmuebles||[]).length+' propiedad(es) ▶</div></div>';
@@ -2239,8 +2305,8 @@ function renderBalMain() {
     tBi+=v;
     h+='<div class="bal-card a-c"><div class="bal-name">'+k+'</div><div class="bal-val '+scl(v)+'">'+sv(v)+'</div></div>';
   });
-  tA=tB+tI+tBi;
-  h += '</div><div class="bal-total bt-act"><span>Total Activos</span><span>'+sv(tA)+'</span></div></div>';
+  h += '</div><div class="bal-total bt-act"><span>TOTAL ACTIVO</span><span>'+sv(tA)+'</span></div></div>';
+  h += '<div class="bal-total" style="background:rgba(16,185,129,.07);color:var(--accent);border:1px solid rgba(16,185,129,.12);display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:var(--rs);margin-top:-8px"><span style="font-size:11px">Bienes: '+sv(tBi)+'</span><span style="font-size:11px">Disponibilidades+Inv: '+sv(tB+tI)+'</span></div>';
   // PASIVOS
   h += '<div class="bal-section"><div class="bal-hd bal-pas"><span>PASIVOS</span><span>'+sv(tP)+'</span></div><div class="bal-grid">';
   lc.forEach(function(item){var l=item.l,s=item.s;h+='<div class="bal-card p-c"><div class="bal-name">'+l.nombre+'</div><div class="bal-val neg">'+(s>0?'−':'')+'$'+fmt(Math.abs(s))+'</div><div class="bal-sub" style="color:var(--pasivo)">Prestamo</div></div>';});
