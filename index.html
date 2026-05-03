@@ -274,35 +274,11 @@ setTimeout(function(){
   }
 }, 3000);
 </script>
-<div id="readonly-banner" style="display:none;background:rgba(245,158,11,.15);color:var(--gold);text-align:center;padding:6px;font-size:11px;border-bottom:1px solid rgba(245,158,11,.3)">Modo consulta — solo lectura</div>
 <div id="sync-pill"><div id="sync-dot"></div><span id="sync-txt">--</span></div>
 <div id="offline-banner">Sin conexion - los cambios se guardaran cuando vuelva internet</div>
 
 
 <!-- v20260503100919 -->
-<!-- LOGIN PAGE -->
-<div id="login-page" style="position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9000;padding:24px">
-  <div style="width:100%;max-width:380px">
-    <div style="text-align:center;margin-bottom:32px">
-      <div style="font-family:var(--hf);font-size:26px;font-weight:800;color:var(--tx)">Mis Finanzas<span style="color:var(--accent)">.</span></div>
-      <div style="font-size:12px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:1px">Economia Personal</div>
-    </div>
-    <div id="login-error" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:10px 14px;border-radius:var(--rs);font-size:13px;margin-bottom:12px"></div>
-    <div class="card">
-      <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="tu@email.com" autocomplete="email" inputmode="email"></div>
-      <div class="field"><label>Contrasena</label>
-        <div style="position:relative">
-          <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" style="padding-right:40px">
-          <button onclick="togglePassVis()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px">&#128065;</button>
-        </div>
-      </div>
-      <button class="btn btn-prim btn-full" style="margin-top:8px" onclick="doLogin()">Ingresar</button>
-      <button class="btn" style="width:100%;margin-top:8px;font-size:12px" onclick="doForgotPass()">Olvide mi contrasena</button>
-    </div>
-    <p style="text-align:center;font-size:11px;color:var(--tx3);margin-top:16px">v2.0 &mdash; Acceso restringido</p>
-  </div>
-</div>
-
 <!-- ADMIN - GESTIÓN USUARIOS (modal) -->
 <div class="modal-bg" id="modal-usuarios">
   <div class="modal" style="max-width:480px">
@@ -327,7 +303,7 @@ setTimeout(function(){
   </div>
 </div>
 
-<div id="shell" style="display:none">
+<div id="shell">
 <aside id="sb">
   <div class="sb-brand">
     <div class="sb-name">Mis Finanzas<span>.</span></div>
@@ -867,7 +843,6 @@ setTimeout(function(){
 
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-auth-compat.min.js"></script>
 
 <script>
 // ============================================================
@@ -1191,7 +1166,7 @@ function computeSaldos(recs, aper) {
 // ============================================================
 // FIREBASE
 // ============================================================
-var db, auth, CFG, _rCol, _rDoc, _aDoc, _lCol, _lDoc;
+var db, CFG, _rCol, _rDoc, _aDoc, _lCol, _lDoc;
 
 function initFirebase() {
   var FB = {
@@ -1204,7 +1179,6 @@ function initFirebase() {
   };
   firebase.initializeApp(FB);
   db = firebase.firestore();
-  auth = firebase.auth();
   CFG = db.collection('config').doc('main');
   _rCol = function(id){return db.collection('records').doc(String(id)).collection('items');};
   _rDoc = function(ej,id){return db.collection('records').doc(String(ej)).collection('items').doc(String(id));};
@@ -1325,43 +1299,17 @@ function loadAll() {
   }, function(e){console.error('loans:',e);});
 }
 
-var currentUser = null;
-var currentRole = null;
-var SUPERADMIN = 'rlafratta@lafrattayasociados.com.ar';
 var _appStarted = false;
 function startApp() {
   if (_appStarted) return;
   _appStarted = true;
-  try { var ld=document.getElementById('loading'); if(ld){ld.classList.add('hidden');ld.style.display='none';} } catch(e){}
-  auth.onAuthStateChanged(function(user){
-    if(user){onUserLogin(user);}else{showLoginPage();}
-  });
-}
-function showLoginPage(){
-  var lp=document.getElementById('login-page'); if(lp)lp.style.display='flex';
-  var sh=document.getElementById('shell'); if(sh)sh.style.display='none';
-}
-function onUserLogin(user){
-  currentUser=user;
-  db.collection('users').doc(user.uid).get().then(function(doc){
-    var role=user.email===SUPERADMIN?'superadmin':'consultor';
-    var nombre=user.email;
-    if(doc.exists&&user.email!==SUPERADMIN){role=doc.data().rol||'consultor';nombre=doc.data().nombre||user.email;}
-    currentRole=role;
-    var lp=document.getElementById('login-page'); if(lp)lp.style.display='none';
-    var sh=document.getElementById('shell'); if(sh)sh.style.display='flex';
-    var info=document.getElementById('sb-user-info'); if(info)info.textContent=nombre+' ('+role+')';
-    var adm=document.getElementById('sb-admin-section'); if(adm)adm.style.display=(role==='superadmin'||role==='admin')?'block':'none';
-    var rob=document.getElementById('readonly-banner'); if(rob)rob.style.display=role==='consultor'?'block':'none';
-    var wop=['carga','apertura','procesos','datos'];
-    wop.forEach(function(p){var b=document.querySelector('.ni[data-p="'+p+'"]');if(b)b.style.display=role==='consultor'?'none':'';});
-    updateSBEj(); fbSubscribe(S.activeEj); safeRenderBalance();
-  }).catch(function(){
-    currentRole=user.email===SUPERADMIN?'superadmin':'consultor';
-    var lp=document.getElementById('login-page'); if(lp)lp.style.display='none';
-    var sh=document.getElementById('shell'); if(sh)sh.style.display='flex';
-    updateSBEj(); fbSubscribe(S.activeEj); safeRenderBalance();
-  });
+  try {
+    var ld = document.getElementById('loading');
+    if (ld) { ld.classList.add('hidden'); ld.style.display='none'; }
+  } catch(e) {}
+  updateSBEj();
+  fbSubscribe(S.activeEj);
+  safeRenderBalance();
 }
 function isReadOnly(){return currentRole==='consultor';}
 
@@ -3701,93 +3649,9 @@ function updateMultiPagoDiff() {
   }
 }
 
-function doLogin(){
-  var em=(document.getElementById('login-email')||{}).value||'';
-  var pw=(document.getElementById('login-pass')||{}).value||'';
-  var er=document.getElementById('login-error');
-  if(!em||!pw){if(er){er.textContent='Ingresa email y contrasena';er.style.display='block';}return;}
-  if(er)er.style.display='none';
-  auth.signInWithEmailAndPassword(em,pw).catch(function(e){
-    var m='Error al ingresar';
-    if(e.code==='auth/user-not-found'||e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')m='Email o contrasena incorrectos';
-    else if(e.code==='auth/too-many-requests')m='Demasiados intentos. Intenta mas tarde.';
-    if(er){er.textContent=m;er.style.display='block';}
-  });
-}
-function doLogout(){
-  if(!confirm('Cerrar sesion?'))return;
-  auth.signOut().then(function(){
-    currentUser=null;currentRole=null;_appStarted=false;
-    if(unsubRec){unsubRec();unsubRec=null;}
-    if(unsubLoans){unsubLoans();unsubLoans=null;}
-    showLoginPage();
-    var e=document.getElementById('login-email'); if(e)e.value='';
-    var p=document.getElementById('login-pass'); if(p)p.value='';
-  });
-}
-function doForgotPass(){
-  var em=(document.getElementById('login-email')||{}).value||'';
-  if(!em)return toast('Ingresa tu email primero',true);
-  auth.sendPasswordResetEmail(em).then(function(){toast('Email de recuperacion enviado');}).catch(function(e){toast(e.message,true);});
-}
-function togglePassVis(){
-  var i=document.getElementById('login-pass'); if(i)i.type=i.type==='password'?'text':'password';
-}
 document.addEventListener('keydown',function(e){
   if(e.key==='Enter'){var lp=document.getElementById('login-page');if(lp&&lp.style.display!=='none')doLogin();}
 });
-function loadUsuarios(){
-  var list=document.getElementById('usuarios-list'); if(!list)return;
-  list.innerHTML='<p style="font-size:12px;color:var(--tx3)">Cargando...</p>';
-  db.collection('users').get().then(function(snap){
-    if(snap.empty){list.innerHTML='<p style="font-size:12px;color:var(--tx3)">Sin usuarios creados.</p>';return;}
-    list.innerHTML='';
-    snap.forEach(function(doc){
-      var u=doc.data();
-      var div=document.createElement('div'); div.className='list-item';
-      var nm=document.createElement('span'); nm.className='list-name';
-      nm.innerHTML='<strong>'+(u.nombre||u.email)+'</strong><br><span style="font-size:11px;color:var(--tx3)">'+u.email+' &mdash; <span style="color:'+(u.rol==='admin'?'var(--accent)':'var(--blue)')+'">'+( u.rol||'consultor')+'</span></span>';
-      div.appendChild(nm);
-      var del=document.createElement('button'); del.className='btn-del'; del.textContent='x';
-      del.onclick=(function(uid,nom){return function(){eliminarUsuario(uid,nom);};})(doc.id,u.nombre||u.email);
-      div.appendChild(del); list.appendChild(div);
-    });
-  }).catch(function(e){list.innerHTML='<p style="color:var(--danger);font-size:12px">'+e.message+'</p>';});
-}
-function crearUsuario(){
-  if(currentRole!=='superadmin'&&currentRole!=='admin')return toast('Sin permisos',true);
-  var em=(document.getElementById('nu-email')||{}).value.trim();
-  var pw=(document.getElementById('nu-pass')||{}).value.trim();
-  var nom=(document.getElementById('nu-nombre')||{}).value.trim();
-  var rol=(document.getElementById('nu-rol')||{}).value||'consultor';
-  if(!em||!pw)return toast('Email y contrasena obligatorios',true);
-  if(pw.length<8)return toast('Contrasena minimo 8 caracteres',true);
-  var secApp;
-  try{secApp=firebase.app('secondary');}catch(e){secApp=firebase.initializeApp(firebase.app().options,'secondary');}
-  firebase.auth(secApp).createUserWithEmailAndPassword(em,pw).then(function(cred){
-    return db.collection('users').doc(cred.user.uid).set({
-      email:em,nombre:nom||em,rol:rol,
-      creadoPor:currentUser.email,creadoEn:firebase.firestore.FieldValue.serverTimestamp()
-    }).then(function(){
-      firebase.auth(secApp).signOut();
-      toast('Usuario creado: '+em);
-      ['nu-email','nu-pass','nu-nombre'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
-      document.getElementById('nu-rol').value='consultor';
-      loadUsuarios();
-      var msg='Acceso a Mis Finanzas Personales:\nURL: https://rlafratta.github.io/finanzas-app\nUsuario: '+em+'\nContrasena: '+pw+'\nRol: '+rol;
-      if(confirm('Usuario creado. Compartir por WhatsApp?'))window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
-    });
-  }).catch(function(e){
-    var m=e.message;
-    if(e.code==='auth/email-already-in-use')m='Ese email ya tiene cuenta';
-    toast(m,true);
-  });
-}
-function eliminarUsuario(uid,nom){
-  if(currentRole!=='superadmin')return toast('Solo el superadmin puede eliminar usuarios',true);
-  if(!confirm('Eliminar '+nom+'?'))return;
-  db.collection('users').doc(uid).delete().then(function(){toast('Usuario eliminado');loadUsuarios();});
-}
 
 // ── BANK & INVESTMENT LINKS ─────────────────────────────────────
 var BANK_LINKS = {
@@ -3867,23 +3731,6 @@ function openIOLLink(name, customUrl) {
   window.open(url, '_blank');
 }
 
-function cambiarContrasena() {
-  var p1=(document.getElementById('new-pass-1')||{}).value||'';
-  var p2=(document.getElementById('new-pass-2')||{}).value||'';
-  if(!p1||!p2)return toast('Ingresa la nueva contrasena',true);
-  if(p1!==p2)return toast('Las contrasenas no coinciden',true);
-  if(p1.length<8)return toast('Minimo 8 caracteres',true);
-  if(!currentUser)return toast('Debes estar logueado',true);
-  currentUser.updatePassword(p1).then(function(){
-    toast('Contrasena actualizada');
-    document.getElementById('new-pass-1').value='';
-    document.getElementById('new-pass-2').value='';
-  }).catch(function(e){
-    var msg=e.message;
-    if(e.code==='auth/requires-recent-login')msg='Cerrá sesion y volvé a ingresar antes de cambiar la contrasena';
-    toast(msg,true);
-  });
-}
 function exportData() {
   var blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   var url=URL.createObjectURL(blob);
