@@ -274,10 +274,59 @@ setTimeout(function(){
   }
 }, 3000);
 </script>
+<div id="readonly-banner" style="display:none;background:rgba(245,158,11,.15);color:var(--gold);text-align:center;padding:6px;font-size:11px;border-bottom:1px solid rgba(245,158,11,.3)">Modo consulta — solo lectura</div>
 <div id="sync-pill"><div id="sync-dot"></div><span id="sync-txt">--</span></div>
 <div id="offline-banner">Sin conexion - los cambios se guardaran cuando vuelva internet</div>
 
-<div id="shell">
+
+<!-- LOGIN PAGE -->
+<div id="login-page" style="position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9000;padding:24px">
+  <div style="width:100%;max-width:380px">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-family:var(--hf);font-size:26px;font-weight:800;color:var(--tx)">Mis Finanzas<span style="color:var(--accent)">.</span></div>
+      <div style="font-size:12px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:1px">Economia Personal</div>
+    </div>
+    <div id="login-error" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:10px 14px;border-radius:var(--rs);font-size:13px;margin-bottom:12px"></div>
+    <div class="card">
+      <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="tu@email.com" autocomplete="email" inputmode="email"></div>
+      <div class="field"><label>Contrasena</label>
+        <div style="position:relative">
+          <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" style="padding-right:40px">
+          <button onclick="togglePassVis()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px">&#128065;</button>
+        </div>
+      </div>
+      <button class="btn btn-prim btn-full" style="margin-top:8px" onclick="doLogin()">Ingresar</button>
+      <button class="btn" style="width:100%;margin-top:8px;font-size:12px" onclick="doForgotPass()">Olvide mi contrasena</button>
+    </div>
+    <p style="text-align:center;font-size:11px;color:var(--tx3);margin-top:16px">v2.0 &mdash; Acceso restringido</p>
+  </div>
+</div>
+
+<!-- ADMIN - GESTIÓN USUARIOS (modal) -->
+<div class="modal-bg" id="modal-usuarios">
+  <div class="modal" style="max-width:480px">
+    <h2>Gestion de Usuarios</h2>
+    <div id="usuarios-list" style="margin-bottom:16px;max-height:200px;overflow-y:auto"></div>
+    <div style="border-top:1px solid var(--b1);padding-top:14px">
+      <div class="card-hd" style="margin-bottom:10px">Nuevo Usuario</div>
+      <div class="field"><label>Email *</label><input type="email" id="nu-email" placeholder="usuario@email.com"></div>
+      <div class="field"><label>Contrasena temporal *</label><input type="text" id="nu-pass" placeholder="Min 8 caracteres"></div>
+      <div class="field"><label>Nombre</label><input type="text" id="nu-nombre" placeholder="Nombre del usuario"></div>
+      <div class="field"><label>Rol</label>
+        <select id="nu-rol">
+          <option value="consultor">Consultor (solo lectura)</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-prim" onclick="crearUsuario()">Crear usuario</button>
+        <button class="btn" onclick="closeMod('modal-usuarios')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="shell" style="display:none">
 <aside id="sb">
   <div class="sb-brand">
     <div class="sb-name">Mis Finanzas<span>.</span></div>
@@ -301,7 +350,15 @@ setTimeout(function(){
     <button class="ni" data-p="tarjetas" onclick="nav('tarjetas',this)"><span class="ni-ico">&#128179;</span>Tarjetas</button>
     <div class="sb-grp">Datos</div>
     <button class="ni" data-p="procesos" onclick="nav('procesos',this)"><span class="ni-ico">&#128197;</span>Procesos Mensuales</button>
-    <button class="ni" data-p="datos" onclick="nav('datos',this)"><span class="ni-ico">&#9881;</span>Backup / Datos</button>
+    <button class="ni" data-p="datos" onclick="nav('datos',this)"><span class="ni-ico">&#9881;</span>Configuracion</button>
+    <div id="sb-admin-section" style="display:none">
+      <div class="sb-grp">Administracion</div>
+      <button class="ni" onclick="openMod('modal-usuarios')"><span class="ni-ico">&#128100;</span>Usuarios</button>
+    </div>
+    <div style="padding:14px 18px 8px;border-top:1px solid var(--b1);margin-top:8px">
+      <div style="font-size:10px;color:var(--tx3);margin-bottom:6px" id="sb-user-info"></div>
+      <button class="btn btn-sm" onclick="doLogout()" style="width:100%">Cerrar sesion</button>
+    </div>
   </div>
 </aside>
 <div id="overlay" onclick="closeSB()"></div>
@@ -450,8 +507,17 @@ setTimeout(function(){
         </div>
         <div class="fx-res vis" id="iol-res" style="display:none"></div>
       </div>
+
+      <!-- MULTI PAGO -->
+      <div class="card" id="multi-pago-panel" style="display:none;border-color:rgba(16,185,129,.2)">
+        <div class="card-hd" style="color:var(--accent)">Distribuir entre formas de pago</div>
+        <p style="font-size:11px;color:var(--tx2);margin-bottom:10px">La suma debe igualar el importe total.</p>
+        <div id="multi-pago-rows"></div>
+        <button class="btn btn-sm" style="margin-top:8px" onclick="addMultiPagoRow()">+ Agregar forma de pago</button>
+        <div id="multi-pago-diff" style="margin-top:8px;font-size:12px;color:var(--tx3)"></div>
+      </div>
       <div class="card">
-        <div class="card-hd" id="pago-hd">Forma de Pago</div>
+        <div class="card-hd" id="pago-hd" style="display:flex;justify-content:space-between;align-items:center">Forma de Pago <button class="btn btn-sm" style="font-size:10px" onclick="toggleMultiPago(true)">+ Multi pago</button></div>
         <div class="pills" id="pay-pills"></div>
         <div class="sub-panel sub-cc" id="sub-cc">
           <div class="field"><label>Tarjeta *</label>
@@ -700,15 +766,6 @@ setTimeout(function(){
         </div>
         <p style="font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5">Cambios sincronizados automaticamente entre todos tus dispositivos.</p>
       </div>
-      <div class="card" style="border-color:rgba(168,85,247,.2)">
-        <div class="card-hd" style="color:var(--purple)">Valuacion FCI</div>
-        <p style="font-size:12px;color:var(--tx2);margin-bottom:10px;line-height:1.5">Actualiza el valor del FCI segun precio actual de cuotaparte. Genera un registro de Intereses FCI.</p>
-        <div class="row2" style="margin-bottom:8px">
-          <div class="field"><label>Mes</label>
-            <select id="val-fci-mes"><option value="">-- Mes --</option><option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option><option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option><option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option></select>
-          </div>
-          <div class="field"><label>Fondo</label><input type="text" id="val-fci-fondo" placeholder="Ej: Galicia Ahorro..."></div>
-        </div>
         <div class="row2" style="margin-bottom:8px">
           <div class="field"><label>Cuotapartes actuales</label><input type="number" id="val-fci-cp" placeholder="0.0000" step="0.0001" min="0" inputmode="decimal" oninput="calcValFCI()"></div>
           <div class="field"><label>Valor actual cuotaparte ($)</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="val-fci-vl" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcValFCI()"></div></div>
@@ -716,15 +773,6 @@ setTimeout(function(){
         <div id="val-fci-prev" style="display:none;padding:9px 12px;border-radius:var(--rs);margin-bottom:8px;font-size:13px;font-family:var(--hf);font-weight:700"></div>
         <button class="btn btn-blue" onclick="aplicarValFCI()">Aplicar valuacion FCI</button>
       </div>
-      <div class="card" style="border-color:rgba(245,158,11,.2)">
-        <div class="card-hd" style="color:var(--gold)">Valuacion IOL / Criptos</div>
-        <p style="font-size:12px;color:var(--tx2);margin-bottom:10px;line-height:1.5">Actualiza el valor de tus inversiones IOL/Criptos. Genera un registro de Resultado IOL.</p>
-        <div class="row2" style="margin-bottom:8px">
-          <div class="field"><label>Mes</label>
-            <select id="val-iol-mes"><option value="">-- Mes --</option><option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option><option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option><option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option></select>
-          </div>
-          <div class="field"><label>Instrumento</label><input type="text" id="val-iol-name" placeholder="Ej: YPF, BTC, AL30..."></div>
-        </div>
         <div class="row2" style="margin-bottom:8px">
           <div class="field"><label>Cantidad</label><input type="number" id="val-iol-qty" placeholder="0.0000" step="0.0001" min="0" inputmode="decimal" oninput="calcValIOL()"></div>
           <div class="field"><label>Cotizacion actual</label><input type="number" id="val-iol-cot" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcValIOL()"></div>
@@ -736,17 +784,20 @@ setTimeout(function(){
         <div id="val-iol-prev" style="display:none;padding:9px 12px;border-radius:var(--rs);margin-bottom:8px;font-size:13px;font-family:var(--hf);font-weight:700"></div>
         <button class="btn btn-blue" onclick="aplicarValIOL()">Aplicar valuacion IOL</button>
       </div>
-      <div class="card">
-        <div class="card-hd">Diferencia de Cambio (ME)</div>
-        <p style="font-size:12px;color:var(--tx2);margin-bottom:10px;line-height:1.5">Proceso optativo. Calcula la diferencia entre el valor historico de tus dolares y el tipo de cambio al cierre del mes.</p>
-        <div class="row2" style="margin-bottom:8px">
-          <div class="field"><label>Mes</label>
-            <select id="dc-mes"><option value="">-- Mes --</option><option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option><option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option><option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option></select>
-          </div>
-          <div class="field"><label>TC cierre ($/USD)</label><div class="amt-wrap"><span class="amt-sym">$</span><input type="number" id="dc-tc" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcDC()"></div></div>
         </div>
         <div id=" style="display:none;padding:9px 12px;border-radius:var(--rs);margin-bottom:8px;font-size:13px;font-family:var(--hf);font-weight:700"></div>
         <button class="btn btn-blue" onclick="aplicarDC()">Aplicar diferencia de cambio</button>
+      </div>
+      <div class="card">
+        <div class="card-hd">&#128274; Seguridad</div>
+        <p style="font-size:12px;color:var(--tx2);margin-bottom:10px">Cambia tu contrasena de acceso.</p>
+        <div class="field"><label>Nueva contrasena</label>
+          <input type="password" id="new-pass-1" placeholder="Min 8 caracteres" autocomplete="new-password">
+        </div>
+        <div class="field"><label>Confirmar contrasena</label>
+          <input type="password" id="new-pass-2" placeholder="Repetir contrasena" autocomplete="new-password">
+        </div>
+        <button class="btn btn-prim" onclick="cambiarContrasena()">Cambiar contrasena</button>
       </div>
       <div class="card">
         <div class="card-hd">Exportar backup</div>
@@ -802,7 +853,7 @@ setTimeout(function(){
       <label>Categoria</label>
       <div class="pills" id="edit-cat-pills">
         <button class="pill" data-cat="ingreso" onclick="selCatEdit(this)">+ Ingreso</button>
-        <button class="pill" data-cat="egreso" onclick="selCatEdit(this)">- Egreso</button>
+        <button class="pill" data-cat="egreso" onclick="selCatEdit(this)">ton>
         <button class="pill" data-cat="otro" onclick="selCatEdit(this)">Mov. Interno</button>
         <button class="pill" data-cat="activo_fijo" onclick="selCatEdit(this)">Activo Fijo</button>
         <button class="pill" data-cat="pasivo" onclick="selCatEdit(this)">Pasivo</button>
@@ -814,7 +865,7 @@ setTimeout(function(){
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-auth-compat.min.js"></script>
 
 <script>
 // ============================================================
@@ -1138,7 +1189,7 @@ function computeSaldos(recs, aper) {
 // ============================================================
 // FIREBASE
 // ============================================================
-var db, CFG, _rCol, _rDoc, _aDoc, _lCol, _lDoc;
+var db, auth, CFG, _rCol, _rDoc, _aDoc, _lCol, _lDoc;
 
 function initFirebase() {
   var FB = {
@@ -1151,6 +1202,7 @@ function initFirebase() {
   };
   firebase.initializeApp(FB);
   db = firebase.firestore();
+  auth = firebase.auth();
   CFG = db.collection('config').doc('main');
   _rCol = function(id){return db.collection('records').doc(String(id)).collection('items');};
   _rDoc = function(ej,id){return db.collection('records').doc(String(ej)).collection('items').doc(String(id));};
@@ -1271,18 +1323,45 @@ function loadAll() {
   }, function(e){console.error('loans:',e);});
 }
 
+var currentUser = null;
+var currentRole = null;
+var SUPERADMIN = 'rlafratta@lafrattayasociados.com.ar';
 var _appStarted = false;
 function startApp() {
   if (_appStarted) return;
   _appStarted = true;
-  try {
-    var ld = document.getElementById('loading');
-    if (ld) { ld.classList.add('hidden'); ld.style.display='none'; }
-  } catch(e) {}
-  updateSBEj();
-  fbSubscribe(S.activeEj);
-  safeRenderBalance();
+  try { var ld=document.getElementById('loading'); if(ld){ld.classList.add('hidden');ld.style.display='none';} } catch(e){}
+  auth.onAuthStateChanged(function(user){
+    if(user){onUserLogin(user);}else{showLoginPage();}
+  });
 }
+function showLoginPage(){
+  var lp=document.getElementById('login-page'); if(lp)lp.style.display='flex';
+  var sh=document.getElementById('shell'); if(sh)sh.style.display='none';
+}
+function onUserLogin(user){
+  currentUser=user;
+  db.collection('users').doc(user.uid).get().then(function(doc){
+    var role=user.email===SUPERADMIN?'superadmin':'consultor';
+    var nombre=user.email;
+    if(doc.exists&&user.email!==SUPERADMIN){role=doc.data().rol||'consultor';nombre=doc.data().nombre||user.email;}
+    currentRole=role;
+    var lp=document.getElementById('login-page'); if(lp)lp.style.display='none';
+    var sh=document.getElementById('shell'); if(sh)sh.style.display='flex';
+    var info=document.getElementById('sb-user-info'); if(info)info.textContent=nombre+' ('+role+')';
+    var adm=document.getElementById('sb-admin-section'); if(adm)adm.style.display=(role==='superadmin'||role==='admin')?'block':'none';
+    var rob=document.getElementById('readonly-banner'); if(rob)rob.style.display=role==='consultor'?'block':'none';
+    var wop=['carga','apertura','procesos','datos'];
+    wop.forEach(function(p){var b=document.querySelector('.ni[data-p="'+p+'"]');if(b)b.style.display=role==='consultor'?'none':'';});
+    updateSBEj(); fbSubscribe(S.activeEj); safeRenderBalance();
+  }).catch(function(){
+    currentRole=user.email===SUPERADMIN?'superadmin':'consultor';
+    var lp=document.getElementById('login-page'); if(lp)lp.style.display='none';
+    var sh=document.getElementById('shell'); if(sh)sh.style.display='flex';
+    updateSBEj(); fbSubscribe(S.activeEj); safeRenderBalance();
+  });
+}
+function isReadOnly(){return currentRole==='consultor';}
 
 // ============================================================
 // NAVIGATION
@@ -1298,7 +1377,7 @@ function nav(page, btn) {
     pgEl.classList.add('on');
     var titles = {carga:'Nueva Carga',apertura:'Saldos Iniciales',registros:'Registros',procesos:'Procesos Mensuales',
       balance:'Balance','prestamos':'Prestamos','ejercicios':'Ejercicios',
-      'conceptos':'Conceptos','pagos':'Formas de Pago','tarjetas':'Tarjetas','datos':'Backup / Datos','procesos':'Procesos Mensuales'};
+      'conceptos':'Conceptos','pagos':'Formas de Pago','tarjetas':'Tarjetas','datos':'Configuracion','procesos':'Procesos Mensuales'};
     var tb = document.getElementById('tb-title');
     if (tb) tb.textContent = titles[page] || page;
     var nb = btn || document.querySelector('.ni[data-p="'+page+'"]');
@@ -1396,14 +1475,13 @@ function buildCS(id, itemsFn, onSel, withBadge) {
         render('');
         drop.classList.add('open');
         newDisp.classList.add('open');
+        _csOpenedAt = Date.now(); // guard against immediate close
         if (qEl) {
           qEl.value = '';
-          // iOS Safari requires explicit user gesture for keyboard
           qEl.removeAttribute('readonly');
           qEl.setAttribute('autocomplete','off');
           setTimeout(function(){
             qEl.focus();
-            qEl.click();
           },50);
         }
       }
@@ -1417,7 +1495,20 @@ function closeAllCS() {
   var disps = document.querySelectorAll('.cs-d');
   for (var j = 0; j < disps.length; j++) disps[j].classList.remove('open');
 }
-document.addEventListener('click', closeAllCS);
+var _csOpenedAt = 0;
+document.addEventListener('click', function(e) {
+  if (Date.now() - _csOpenedAt < 250) return; // guard: ignore click that opened dropdown
+  closeAllCS();
+});
+document.addEventListener('touchend', function(e) {
+  if (Date.now() - _csOpenedAt < 250) return;
+  var t = e.target;
+  while (t) {
+    if (t.classList && (t.classList.contains('cs-d') || t.classList.contains('cs-drop'))) return;
+    t = t.parentElement;
+  }
+  closeAllCS();
+});
 
 // ============================================================
 // CARGA
@@ -1692,12 +1783,33 @@ function guardar() {
       fciFondo:fciFondo,fciCp:fciCp,fciVl:fciVl,
       iolType:iolType,iolName:iolName,iolQty:iolQty,iolCot:iolCot,iolCurrency:iolCurrency,iolTc:iolTc,
       ts:Date.now()};
-    recs.unshift(nr); fbSaveRec(nr); toast('Guardado');
+    recs.unshift(nr);
+    var mpP=document.getElementById('multi-pago-panel');
+    var useMP=mpP&&mpP.style.display!=='none'&&_multiPagoRows.length>1;
+    if(useMP){
+      var mpT=nr.importe;
+      var mpS=_multiPagoRows.reduce(function(s,r){return s+(r.importe||0);},0);
+      if(Math.abs(mpT-mpS)>0.01){recs.shift();return toast('La suma no coincide con el total',true);}
+      var prs=[];
+      _multiPagoRows.forEach(function(row,di){
+        if(!row.importe||!row.pago)return;
+        var sub=JSON.parse(JSON.stringify(nr));
+        sub.id=Date.now()+di+1;sub.pago=row.pago;sub.importe=row.importe;
+        sub.obs=(nr.obs?nr.obs+' ':'')+'['+fmt(row.importe)+'/'+fmt(mpT)+']';
+        recs.unshift(sub);prs.push(fbSaveRec(sub));
+      });
+      recs.shift(); // remove the original nr
+      Promise.all(prs).then(function(){resetCarga();toast('Guardado ('+prs.length+' registros)');});
+    } else {
+      fbSaveRec(nr); toast('Guardado');
+    }
   }
   resetCarga();
 }
 
 function resetCarga() {
+  _multiPagoRows=[];
+  var mpR=document.getElementById('multi-pago-panel');if(mpR)mpR.style.display='none';
   var ids = ['concepto-v','tarjeta-v','importe-inp','obs-inp','loan-cap','loan-cuotas','loan-gastos','repay-cap','repay-int','fx-usd','fx-tc','me-qty','me-tc','fci-fondo','fci-cp','fci-vl','iol-name','iol-qty','iol-cot','iol-tc'];
   ids.forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
   var cd = document.getElementById('cs-concepto-d');
@@ -1739,8 +1851,26 @@ function initAper() {
   // BANCOS
   h+='<div class="card"><div class="card-hd" style="color:var(--cyan)">ACTIVOS - Bancos / Efectivo</div>';
   pagos.forEach(function(b){
-    h+='<div class="field"><label>'+b+'</label><div class="amt-wrap"><span class="amt-sym">$</span>'+
-      '<input type="number" id="ab-'+b.replace(/[^a-zA-Z0-9]/g,'_')+'" placeholder="0.00" step="0.01" value="'+(aper['banco_'+b]||'')+'" oninput="updateAperVal()"></div></div>';
+    var isUSD = b.indexOf(' USD') >= 0 || b.indexOf(' EUR') >= 0;
+    var cur = isUSD ? (b.indexOf(' EUR') >= 0 ? 'EUR' : 'USD') : '';
+    if(isUSD) {
+      var bkey2 = b.replace(/[^a-zA-Z0-9]/g,'_');
+      var bqty = aper['banco_qty_'+bkey2]||0;
+      var btc  = aper['banco_tc_'+bkey2]||0;
+      var bpesos = aper['banco_'+b]||0;
+      h += '<div class="field"><label>'+b+'</label>';
+      h += '<div class="row2" style="margin-bottom:4px">';
+      h += '<div class="field"><label>Cantidad</label>';
+      h += '<input type="number" id="ab-qty-'+bkey2+'" placeholder="0.00" step="0.01" value="'+(bqty||'')+'" oninput="calcAperBancoUSD(this)"></div>';
+      h += '<div class="field"><label>Tipo de Cambio ($)</label>';
+      h += '<div class="amt-wrap"><span class="amt-sym">$</span>';
+      h += '<input type="number" id="ab-tc-'+bkey2+'" placeholder="0.00" step="0.01" value="'+(btc||'')+'" oninput="calcAperBancoUSD(this)"></div></div></div>';
+      h += '<div class="amt-wrap"><span class="amt-sym">$</span>';
+      h += '<input type="number" id="ab-'+bkey2+'" placeholder="Total en pesos" step="0.01" value="'+(bpesos||'')+'" oninput="updateAperVal()"></div></div>';
+    } else {
+      h+='<div class="field"><label>'+b+'</label><div class="amt-wrap"><span class="amt-sym">$</span>'+
+        '<input type="number" id="ab-'+b.replace(/[^a-zA-Z0-9]/g,'_')+'" placeholder="0.00" step="0.01" value="'+(aper['banco_'+b]||'')+'" oninput="updateAperVal()"></div></div>';
+    }
   });
   h+='</div>';
 
@@ -1844,6 +1974,7 @@ function aperIOLRow(item,i,aper) {
       '<span style="font-size:12px;font-weight:600;color:var(--gold)">'+(item.tipo?'['+item.tipo+'] ':'')+''+(item.nombre||'IOL')+'</span>'+
       '<button class="btn-del" onclick="removeAperIOL('+i+')">x</button>'+
     '</div>'+
+    '<div class="field"><label>URL / App (opcional)</label><input type="text" id="aiol-url-'+i+'" value="'+(item.customUrl||'')+'" placeholder="Ej: https://cocos.capital" onchange="updateAperIOLUrl('+i+')"></div>'+
     '<div class="row2">'+
       '<div class="field"><label>Tipo</label><select id="aiol-tipo-'+i+'" onchange="updateAperIOL('+i+')">'+
         getIOLTypes().map(function(t){return '<option'+(t===item.tipo?' selected':'')+'>'+t+'</option>';}).join('')+
@@ -1928,6 +2059,13 @@ function updateAperFCI(i) {
   fbSaveCfg();
 }
 
+
+function updateAperIOLUrl(i) {
+  var item = S.iolItems[i]; if(!item) return;
+  var u = document.getElementById('aiol-url-'+i);
+  if(u) item.customUrl = u.value;
+  fbSaveCfg();
+}
 function addAperIOL() {
   if(!S.iolItems)S.iolItems=[];
   S.iolItems.push({id:Date.now(),tipo:'',nombre:'',qty:0,cot:0,cur:'ARS',tc:0});
@@ -2012,6 +2150,15 @@ function updateAperInmueble(i) {
   if(d)item.dir=d.value;
   fbSaveCfg();
 }
+
+function calcAperBancoUSD(banco) {
+  var key = banco.replace(/[^a-zA-Z0-9]/g,'_');
+  var qty = parseFloat((document.getElementById('ab-qty-'+key)||{}).value)||0;
+  var tc  = parseFloat((document.getElementById('ab-tc-'+key)||{}).value)||0;
+  var totEl = document.getElementById('ab-'+key);
+  if(qty && tc && totEl) totEl.value = (qty*tc).toFixed(2);
+  updateAperVal();
+}
 function updateAperVal() {
   var tA=0, tP=0;
   allPNames().forEach(function(b){var e=document.getElementById('ab-'+b.replace(/[^a-zA-Z0-9]/g,'_'));if(e)tA+=parseFloat(e.value)||0;});
@@ -2077,7 +2224,17 @@ function updateAperVal() {
 function guardarAper() {
   if (!S.activeEj) return toast('Sin ejercicio activo', true);
   var data = {};
-  allPNames().forEach(function(b){var e=document.getElementById('ab-'+b.replace(/[^a-zA-Z0-9]/g,'_'));if(e){var v=parseFloat(e.value)||0;if(v)data['banco_'+b]=v;}});
+  allPNames().forEach(function(b){
+    var key=b.replace(/[^a-zA-Z0-9]/g,'_');
+    var e=document.getElementById('ab-'+key);
+    if(e){var v=parseFloat(e.value)||0;if(v)data['banco_'+b]=v;}
+    var isUSD=b.indexOf(' USD')>=0||b.indexOf(' EUR')>=0;
+    if(isUSD){
+      var qe=document.getElementById('ab-qty-'+key);var te=document.getElementById('ab-tc-'+key);
+      if(qe&&parseFloat(qe.value))data['banco_qty_'+key]=parseFloat(qe.value)||0;
+      if(te&&parseFloat(te.value))data['banco_tc_'+key]=parseFloat(te.value)||0;
+    }
+  });
   INV_KEYS.forEach(function(k){var e=document.getElementById('ai-'+k.replace(/[^a-zA-Z0-9]/g,'_'));if(e){var v=parseFloat(e.value)||0;if(v)data['inv_'+k]=v;}});
   BIENES_KEYS.forEach(function(k){var e=document.getElementById('abien-'+k.replace(/[^a-zA-Z0-9]/g,'_'));if(e){var v=parseFloat(e.value)||0;if(v)data['bien_'+k]=v;}});
   // Save ME
@@ -2220,6 +2377,19 @@ function renderBalMain() {
   var tB=0,tI=0,tBi=0,tP=0;
   Object.keys(bancos).forEach(function(k){tB+=bancos[k]||0;});
   Object.keys(inv).forEach(function(k){tI+=inv[k]||0;});
+  // Add FCI items from S.fciItems
+  (S.fciItems||[]).forEach(function(item){
+    var v=aper2['fci_'+item.id]||0;
+    // Add movements for this FCI
+    recs.forEach(function(r){if(r.inv==='FCI'&&r.fciFondo===item.fondo)v+=(r.investEffect||1)*r.importe;});
+    tI+=v;
+  });
+  // Add IOL items from S.iolItems
+  (S.iolItems||[]).forEach(function(item){
+    var v=aper2['iol_'+item.id]||0;
+    recs.forEach(function(r){if(r.inv==='Criptos / IOL'&&r.iolName===item.nombre)v+=(r.investEffect||1)*r.importe;});
+    tI+=v;
+  });
   Object.keys(bienes).forEach(function(k){tBi+=bienes[k]||0;});
   // Add ME from apertura
   var aper2=getAper();
@@ -2292,6 +2462,32 @@ function renderBalMain() {
       '<div class="bal-sub" style="color:var(--gold)">Ver detalle ▶</div></div>';
   });
   h += '</div><div style="font-size:10px;color:var(--tx3);margin:8px 0 6px;text-transform:uppercase;letter-spacing:.7px">Bienes</div><div class="bal-grid">';
+  // FCI items cards in balance
+  (S.fciItems||[]).forEach(function(item){
+    var fv = aper2['fci_'+item.id]||0;
+    recs.forEach(function(r){
+      if(r.inv==='FCI'&&r.fciFondo===item.fondo) fv+=(r.investEffect||1)*r.importe;
+    });
+    if(Math.abs(fv)<0.005)return;
+    h += '<div class="bal-card a-c" style="border-left-color:var(--purple)">';
+    h += '<div class="bal-name">'+(item.fondo||'FCI')+'</div>';
+    h += '<div class="bal-val '+scl(fv)+'">'+sv(fv)+'</div>';
+    h += '<div class="bal-sub" style="color:var(--purple)">FCI</div></div>';
+  });
+  // IOL items cards in balance
+  (S.iolItems||[]).forEach(function(item){
+    var iv = aper2['iol_'+item.id]||0;
+    recs.forEach(function(r){
+      if(r.inv==='Criptos / IOL'&&r.iolName===item.nombre) iv+=(r.investEffect||1)*r.importe;
+    });
+    if(Math.abs(iv)<0.005)return;
+    var iolLbl = (item.tipo?'['+item.tipo+'] ':'')+(item.nombre||'IOL');
+    var iolUrl = item.customUrl||(IOL_LINKS[item.nombre]&&IOL_LINKS[item.nombre].web)||'';
+    h += '<div class="bal-card a-c" style="border-left-color:var(--gold)'+(iolUrl?';cursor:pointer':'')+'"'+(iolUrl?' onclick="openIOLLink('+JSON.stringify(item.nombre)+','+JSON.stringify(item.customUrl||'')+')"':'')+'>';
+    h += '<div class="bal-name">'+iolLbl+'</div>';
+    h += '<div class="bal-val '+scl(iv)+'">'+sv(iv)+'</div>';
+    h += '<div class="bal-sub" style="color:var(--gold)">IOL/Cripto</div></div>';
+  });
   // Rodados grouped
   var totalRod=0;
   (S.rodados||[]).forEach(function(item){totalRod+=aper['rod_'+item.id]||0;});
@@ -2356,6 +2552,27 @@ function renderBalMain() {
     CURRENCIES.forEach(function(cur){
       var meCard=document.getElementById('bal-me-'+cur);
       if(meCard)meCard.onclick=(function(c){return function(){drillME(c);};})(cur);
+    });
+    // Add bank homebanking links
+    Object.keys(bancos).forEach(function(k){
+      var bInfo=BANK_LINKS[k]||BANK_LINKS[k.replace(' USD','').replace(' EUR','')]||null;
+      if(!bInfo||!bInfo.web)return;
+      var v=bancos[k]||0;
+      var ini=aper2['banco_'+k]||0;
+      if(Math.abs(v)<0.005&&!ini&&!hasMovement(k,'banco'))return;
+      // Find the card and add link indicator + onclick
+      var cards=bc.querySelectorAll('.bal-card');
+      cards.forEach(function(card){
+        var nm=card.querySelector('.bal-name');
+        if(nm&&nm.textContent.trim()===k){
+          card.style.cursor='pointer';
+          var lnk=document.createElement('span');
+          lnk.style.cssText='font-size:9px;color:var(--accent);margin-left:4px;opacity:.8';
+          lnk.innerHTML='&#8599;';
+          nm.appendChild(lnk);
+          card.onclick=(function(name){return function(){openBankLink(name);};})(k);
+        }
+      });
     });
   }
 }
@@ -3409,6 +3626,262 @@ function drillME(cur) {
   h+='</tbody></table></div>';
   bc.innerHTML=h;
 }
+
+// ── MULTI PAGO ────────────────────────────────────────────────────
+var _multiPagoRows = [];
+
+function toggleMultiPago(show) {
+  var panel = document.getElementById('multi-pago-panel');
+  if (panel) panel.style.display = show ? 'block' : 'none';
+  if (show && _multiPagoRows.length === 0) {
+    _multiPagoRows = [];
+    addMultiPagoRow();
+    addMultiPagoRow();
+    renderMultiPagoRows();
+  }
+}
+
+function addMultiPagoRow() {
+  _multiPagoRows.push({pago:'', importe:0});
+  renderMultiPagoRows();
+}
+
+function renderMultiPagoRows() {
+  var container = document.getElementById('multi-pago-rows');
+  if (!container) return;
+  container.innerHTML = '';
+  var pagos = allPNames();
+  _multiPagoRows.forEach(function(row, i) {
+    var div = document.createElement('div');
+    div.className = 'row2';
+    div.style.marginBottom = '8px';
+    // Pago selector
+    var sel = document.createElement('select');
+    sel.style.cssText = 'flex:1;background:var(--bg2);border:1px solid var(--b1);border-radius:var(--rs);padding:10px 12px;color:var(--tx);font-size:14px';
+    sel.innerHTML = '<option value="">-- Forma de pago --</option>' +
+      pagos.map(function(p){return '<option'+(p===row.pago?' selected':'')+'>'+p+'</option>';}).join('');
+    sel.onchange = (function(idx){return function(){_multiPagoRows[idx].pago=this.value;updateMultiPagoDiff();};})(i);
+    // Amount
+    var wrap = document.createElement('div');
+    wrap.className = 'amt-wrap';
+    wrap.style.flex = '1';
+    var sym = document.createElement('span');
+    sym.className = 'amt-sym'; sym.textContent = '$';
+    var inp = document.createElement('input');
+    inp.type = 'number'; inp.placeholder = '0.00'; inp.step = '0.01';
+    inp.value = row.importe || '';
+    inp.inputMode = 'decimal';
+    inp.style.cssText = 'flex:1';
+    inp.oninput = (function(idx){return function(){_multiPagoRows[idx].importe=parseFloat(this.value)||0;updateMultiPagoDiff();};})(i);
+    wrap.appendChild(sym); wrap.appendChild(inp);
+    // Delete button
+    var del = document.createElement('button');
+    del.className = 'btn-del'; del.textContent = 'x';
+    del.onclick = (function(idx){return function(){_multiPagoRows.splice(idx,1);renderMultiPagoRows();updateMultiPagoDiff();};})(i);
+    div.appendChild(sel); div.appendChild(wrap); div.appendChild(del);
+    container.appendChild(div);
+  });
+  updateMultiPagoDiff();
+}
+
+function updateMultiPagoDiff() {
+  var total = parseFloat((document.getElementById('importe-inp')||{}).value)||0;
+  var suma = _multiPagoRows.reduce(function(s,r){return s+(r.importe||0);},0);
+  var diff = total - suma;
+  var el = document.getElementById('multi-pago-diff');
+  if (!el) return;
+  if (Math.abs(diff) < 0.01) {
+    el.textContent = '✓ Suma correcta: $'+fmt(suma);
+    el.style.color = 'var(--accent)';
+  } else {
+    el.textContent = 'Diferencia: $'+fmt(Math.abs(diff))+(diff>0?' falta asignar':' excede el total');
+    el.style.color = '#f87171';
+  }
+}
+
+function doLogin(){
+  var em=(document.getElementById('login-email')||{}).value||'';
+  var pw=(document.getElementById('login-pass')||{}).value||'';
+  var er=document.getElementById('login-error');
+  if(!em||!pw){if(er){er.textContent='Ingresa email y contrasena';er.style.display='block';}return;}
+  if(er)er.style.display='none';
+  auth.signInWithEmailAndPassword(em,pw).catch(function(e){
+    var m='Error al ingresar';
+    if(e.code==='auth/user-not-found'||e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')m='Email o contrasena incorrectos';
+    else if(e.code==='auth/too-many-requests')m='Demasiados intentos. Intenta mas tarde.';
+    if(er){er.textContent=m;er.style.display='block';}
+  });
+}
+function doLogout(){
+  if(!confirm('Cerrar sesion?'))return;
+  auth.signOut().then(function(){
+    currentUser=null;currentRole=null;_appStarted=false;
+    if(unsubRec){unsubRec();unsubRec=null;}
+    if(unsubLoans){unsubLoans();unsubLoans=null;}
+    showLoginPage();
+    var e=document.getElementById('login-email'); if(e)e.value='';
+    var p=document.getElementById('login-pass'); if(p)p.value='';
+  });
+}
+function doForgotPass(){
+  var em=(document.getElementById('login-email')||{}).value||'';
+  if(!em)return toast('Ingresa tu email primero',true);
+  auth.sendPasswordResetEmail(em).then(function(){toast('Email de recuperacion enviado');}).catch(function(e){toast(e.message,true);});
+}
+function togglePassVis(){
+  var i=document.getElementById('login-pass'); if(i)i.type=i.type==='password'?'text':'password';
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'){var lp=document.getElementById('login-page');if(lp&&lp.style.display!=='none')doLogin();}
+});
+function loadUsuarios(){
+  var list=document.getElementById('usuarios-list'); if(!list)return;
+  list.innerHTML='<p style="font-size:12px;color:var(--tx3)">Cargando...</p>';
+  db.collection('users').get().then(function(snap){
+    if(snap.empty){list.innerHTML='<p style="font-size:12px;color:var(--tx3)">Sin usuarios creados.</p>';return;}
+    list.innerHTML='';
+    snap.forEach(function(doc){
+      var u=doc.data();
+      var div=document.createElement('div'); div.className='list-item';
+      var nm=document.createElement('span'); nm.className='list-name';
+      nm.innerHTML='<strong>'+(u.nombre||u.email)+'</strong><br><span style="font-size:11px;color:var(--tx3)">'+u.email+' &mdash; <span style="color:'+(u.rol==='admin'?'var(--accent)':'var(--blue)')+'">'+( u.rol||'consultor')+'</span></span>';
+      div.appendChild(nm);
+      var del=document.createElement('button'); del.className='btn-del'; del.textContent='x';
+      del.onclick=(function(uid,nom){return function(){eliminarUsuario(uid,nom);};})(doc.id,u.nombre||u.email);
+      div.appendChild(del); list.appendChild(div);
+    });
+  }).catch(function(e){list.innerHTML='<p style="color:var(--danger);font-size:12px">'+e.message+'</p>';});
+}
+function crearUsuario(){
+  if(currentRole!=='superadmin'&&currentRole!=='admin')return toast('Sin permisos',true);
+  var em=(document.getElementById('nu-email')||{}).value.trim();
+  var pw=(document.getElementById('nu-pass')||{}).value.trim();
+  var nom=(document.getElementById('nu-nombre')||{}).value.trim();
+  var rol=(document.getElementById('nu-rol')||{}).value||'consultor';
+  if(!em||!pw)return toast('Email y contrasena obligatorios',true);
+  if(pw.length<8)return toast('Contrasena minimo 8 caracteres',true);
+  var secApp;
+  try{secApp=firebase.app('secondary');}catch(e){secApp=firebase.initializeApp(firebase.app().options,'secondary');}
+  firebase.auth(secApp).createUserWithEmailAndPassword(em,pw).then(function(cred){
+    return db.collection('users').doc(cred.user.uid).set({
+      email:em,nombre:nom||em,rol:rol,
+      creadoPor:currentUser.email,creadoEn:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function(){
+      firebase.auth(secApp).signOut();
+      toast('Usuario creado: '+em);
+      ['nu-email','nu-pass','nu-nombre'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+      document.getElementById('nu-rol').value='consultor';
+      loadUsuarios();
+      var msg='Acceso a Mis Finanzas Personales:\nURL: https://rlafratta.github.io/finanzas-app\nUsuario: '+em+'\nContrasena: '+pw+'\nRol: '+rol;
+      if(confirm('Usuario creado. Compartir por WhatsApp?'))window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+    });
+  }).catch(function(e){
+    var m=e.message;
+    if(e.code==='auth/email-already-in-use')m='Ese email ya tiene cuenta';
+    toast(m,true);
+  });
+}
+function eliminarUsuario(uid,nom){
+  if(currentRole!=='superadmin')return toast('Solo el superadmin puede eliminar usuarios',true);
+  if(!confirm('Eliminar '+nom+'?'))return;
+  db.collection('users').doc(uid).delete().then(function(){toast('Usuario eliminado');loadUsuarios();});
+}
+
+// ── BANK & INVESTMENT LINKS ─────────────────────────────────────
+var BANK_LINKS = {
+  'Efectivo':                  {web:'', ios:'', android:''},
+  'Banco de la Nacion Argentina': {web:'https://www.bna.com.ar/Personas', ios:'bnaargentina://', android:'ar.com.bna.bnaargentina'},
+  'Banco Macro':               {web:'https://www.macro.com.ar/bancadigital', ios:'macro://', android:'ar.com.macro.macro'},
+  'Banco Galicia':             {web:'https://www.galicia.ar/personas/banca-digital', ios:'galicia://', android:'ar.com.bancogalicia.galicia'},
+  'Banco Santander':           {web:'https://www.santander.com.ar/banco/online/personas', ios:'santander://', android:'ar.com.santander.rio'},
+  'Banco Hipotecario':         {web:'https://www.hipotecario.com.ar/homebanking', ios:'', android:''},
+  'Banco Credicoop':           {web:'https://www.bancocredicoop.coop/homebanking', ios:'', android:''},
+  'Banco BBVA':                {web:'https://www.bbva.com.ar/personas/servicios-digitales/banca-online.html', ios:'bbva://', android:'com.bbva.nxt.android'},
+  'Banco HSBC':                {web:'https://www.hsbc.com.ar/personas/banca-por-internet', ios:'hsbc://', android:'com.hsbc.hsbcargentina'},
+  'Banco ICBC':                {web:'https://homebanking.icbc.com.ar', ios:'', android:''},
+  'Banco Patagonia':           {web:'https://www.bancopatagonia.com.ar/HomeBankingNatural', ios:'', android:''},
+  'Banco Ciudad':              {web:'https://www.bancociudad.com.ar/institucional/homebanking', ios:'', android:''},
+  'Banco Provincia':           {web:'https://bpba.com.ar/homebanking', ios:'', android:''},
+  'Banco Supervielle':         {web:'https://www.supervielle.com.ar/homebanking', ios:'supervielle://', android:'ar.com.supervielle'},
+  'Banco Industrial':          {web:'https://www.bancoindustrial.com.ar/banca-digital', ios:'', android:''},
+  'Banco Comafi':              {web:'https://www.comafi.com.ar/homebanking', ios:'', android:''},
+  'Banco Meridian':            {web:'https://www.meridian.com.ar/homebanking', ios:'', android:''},
+  'Brubank':                   {web:'https://www.brubank.com.ar', ios:'brubank://', android:'ar.com.brubank'},
+  'Mercado Pago':              {web:'https://www.mercadopago.com.ar', ios:'mercadopago://', android:'com.mercadopago.android.px'},
+  'Ualá':                      {web:'https://www.uala.com.ar', ios:'uala://', android:'ar.com.uala.app'},
+  'Naranja X':                 {web:'https://www.naranjax.com', ios:'naranjax://', android:'com.naranjax'},
+  'Personal Pay':              {web:'https://www.personal.com.ar/servicios/personal-pay', ios:'', android:''},
+  'Cuenta DNI':                {web:'https://cuentadni.com.ar', ios:'', android:''},
+  'Prex':                      {web:'https://www.prexcard.com.ar', ios:'', android:''}
+};
+
+var IOL_LINKS = {
+  'IOL':            {web:'https://www.invertironline.com', ios:'invertironline://', android:'com.invertironline.iol'},
+  'Cocos Capital':  {web:'https://www.cocos.capital', ios:'cocos://', android:'capital.cocos.app'},
+  'Balanz':         {web:'https://balanz.com', ios:'balanz://', android:'com.balanz'},
+  'PPI':            {web:'https://ppi.com.ar', ios:'', android:''},
+  'Bull Market':    {web:'https://bullmarketbrokers.com', ios:'', android:''},
+  'Binance':        {web:'https://www.binance.com', ios:'binance://', android:'com.binance.dev'},
+  'Lemon Cash':     {web:'https://www.lemon.me', ios:'lemon://', android:'me.lemon.app'},
+  'Bitso':          {web:'https://bitso.com', ios:'bitso://', android:'com.bitso.wallet'},
+  'Ripio':          {web:'https://www.ripio.com', ios:'ripio://', android:'com.ripio'},
+  'Buenbit':        {web:'https://buenbit.com', ios:'buenbit://', android:'com.buenbit'}
+};
+
+function openBankLink(bankName) {
+  var info = BANK_LINKS[bankName];
+  if(!info||!info.web) return;
+  var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(isMobile) {
+    var isAndroid = /Android/i.test(navigator.userAgent);
+    var deepLink = isAndroid ? (info.android ? 'intent://'+info.android+'/#Intent;scheme='+info.android+';end' : null) : info.ios;
+    if(deepLink) {
+      // Try deep link, fall back to web after 2s
+      var fallbackTimer = setTimeout(function(){window.open(info.web,'_blank');}, 2000);
+      window.location.href = deepLink;
+      // Clear fallback if app opened (page will hide)
+      window.addEventListener('blur', function(){clearTimeout(fallbackTimer);}, {once:true});
+      return;
+    }
+  }
+  window.open(info.web, '_blank');
+}
+
+function openIOLLink(name, customUrl) {
+  var url = customUrl || (IOL_LINKS[name] && IOL_LINKS[name].web) || '';
+  if(!url) return;
+  var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(isMobile) {
+    var info = IOL_LINKS[name];
+    var isAndroid = /Android/i.test(navigator.userAgent);
+    var deepLink = info ? (isAndroid ? null : info.ios) : null;
+    if(deepLink) {
+      var fallbackTimer = setTimeout(function(){window.open(url,'_blank');}, 2000);
+      window.location.href = deepLink;
+      window.addEventListener('blur', function(){clearTimeout(fallbackTimer);}, {once:true});
+      return;
+    }
+  }
+  window.open(url, '_blank');
+}
+
+function cambiarContrasena() {
+  var p1=(document.getElementById('new-pass-1')||{}).value||'';
+  var p2=(document.getElementById('new-pass-2')||{}).value||'';
+  if(!p1||!p2)return toast('Ingresa la nueva contrasena',true);
+  if(p1!==p2)return toast('Las contrasenas no coinciden',true);
+  if(p1.length<8)return toast('Minimo 8 caracteres',true);
+  if(!currentUser)return toast('Debes estar logueado',true);
+  currentUser.updatePassword(p1).then(function(){
+    toast('Contrasena actualizada');
+    document.getElementById('new-pass-1').value='';
+    document.getElementById('new-pass-2').value='';
+  }).catch(function(e){
+    var msg=e.message;
+    if(e.code==='auth/requires-recent-login')msg='Cerrá sesion y volvé a ingresar antes de cambiar la contrasena';
+    toast(msg,true);
+  });
+}
 function exportData() {
   var blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   var url=URL.createObjectURL(blob);
@@ -3439,7 +3912,7 @@ function toast(msg, err) {
 // ============================================================
 // OFFLINE
 // ============================================================
-window.addEventListener('online',function(){document.getElementById('offline-banner').style.display='none';setSyncUI('syncing','Reconectando...');});
+window.addEventListener('online',function(){document.getElementById('offline-banner').style.display='none';setSyncUI('ok','En linea');});
 window.addEventListener('offline',function(){document.getElementById('offline-banner').style.display='block';setSyncUI('error','Sin conexion');});
 if(!navigator.onLine)document.getElementById('offline-banner').style.display='block';
 
@@ -3823,6 +4296,262 @@ function drillME(cur) {
   h+='</tbody></table></div>';
   bc.innerHTML=h;
 }
+
+// ── MULTI PAGO ────────────────────────────────────────────────────
+var _multiPagoRows = [];
+
+function toggleMultiPago(show) {
+  var panel = document.getElementById('multi-pago-panel');
+  if (panel) panel.style.display = show ? 'block' : 'none';
+  if (show && _multiPagoRows.length === 0) {
+    _multiPagoRows = [];
+    addMultiPagoRow();
+    addMultiPagoRow();
+    renderMultiPagoRows();
+  }
+}
+
+function addMultiPagoRow() {
+  _multiPagoRows.push({pago:'', importe:0});
+  renderMultiPagoRows();
+}
+
+function renderMultiPagoRows() {
+  var container = document.getElementById('multi-pago-rows');
+  if (!container) return;
+  container.innerHTML = '';
+  var pagos = allPNames();
+  _multiPagoRows.forEach(function(row, i) {
+    var div = document.createElement('div');
+    div.className = 'row2';
+    div.style.marginBottom = '8px';
+    // Pago selector
+    var sel = document.createElement('select');
+    sel.style.cssText = 'flex:1;background:var(--bg2);border:1px solid var(--b1);border-radius:var(--rs);padding:10px 12px;color:var(--tx);font-size:14px';
+    sel.innerHTML = '<option value="">-- Forma de pago --</option>' +
+      pagos.map(function(p){return '<option'+(p===row.pago?' selected':'')+'>'+p+'</option>';}).join('');
+    sel.onchange = (function(idx){return function(){_multiPagoRows[idx].pago=this.value;updateMultiPagoDiff();};})(i);
+    // Amount
+    var wrap = document.createElement('div');
+    wrap.className = 'amt-wrap';
+    wrap.style.flex = '1';
+    var sym = document.createElement('span');
+    sym.className = 'amt-sym'; sym.textContent = '$';
+    var inp = document.createElement('input');
+    inp.type = 'number'; inp.placeholder = '0.00'; inp.step = '0.01';
+    inp.value = row.importe || '';
+    inp.inputMode = 'decimal';
+    inp.style.cssText = 'flex:1';
+    inp.oninput = (function(idx){return function(){_multiPagoRows[idx].importe=parseFloat(this.value)||0;updateMultiPagoDiff();};})(i);
+    wrap.appendChild(sym); wrap.appendChild(inp);
+    // Delete button
+    var del = document.createElement('button');
+    del.className = 'btn-del'; del.textContent = 'x';
+    del.onclick = (function(idx){return function(){_multiPagoRows.splice(idx,1);renderMultiPagoRows();updateMultiPagoDiff();};})(i);
+    div.appendChild(sel); div.appendChild(wrap); div.appendChild(del);
+    container.appendChild(div);
+  });
+  updateMultiPagoDiff();
+}
+
+function updateMultiPagoDiff() {
+  var total = parseFloat((document.getElementById('importe-inp')||{}).value)||0;
+  var suma = _multiPagoRows.reduce(function(s,r){return s+(r.importe||0);},0);
+  var diff = total - suma;
+  var el = document.getElementById('multi-pago-diff');
+  if (!el) return;
+  if (Math.abs(diff) < 0.01) {
+    el.textContent = '✓ Suma correcta: $'+fmt(suma);
+    el.style.color = 'var(--accent)';
+  } else {
+    el.textContent = 'Diferencia: $'+fmt(Math.abs(diff))+(diff>0?' falta asignar':' excede el total');
+    el.style.color = '#f87171';
+  }
+}
+
+function doLogin(){
+  var em=(document.getElementById('login-email')||{}).value||'';
+  var pw=(document.getElementById('login-pass')||{}).value||'';
+  var er=document.getElementById('login-error');
+  if(!em||!pw){if(er){er.textContent='Ingresa email y contrasena';er.style.display='block';}return;}
+  if(er)er.style.display='none';
+  auth.signInWithEmailAndPassword(em,pw).catch(function(e){
+    var m='Error al ingresar';
+    if(e.code==='auth/user-not-found'||e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')m='Email o contrasena incorrectos';
+    else if(e.code==='auth/too-many-requests')m='Demasiados intentos. Intenta mas tarde.';
+    if(er){er.textContent=m;er.style.display='block';}
+  });
+}
+function doLogout(){
+  if(!confirm('Cerrar sesion?'))return;
+  auth.signOut().then(function(){
+    currentUser=null;currentRole=null;_appStarted=false;
+    if(unsubRec){unsubRec();unsubRec=null;}
+    if(unsubLoans){unsubLoans();unsubLoans=null;}
+    showLoginPage();
+    var e=document.getElementById('login-email'); if(e)e.value='';
+    var p=document.getElementById('login-pass'); if(p)p.value='';
+  });
+}
+function doForgotPass(){
+  var em=(document.getElementById('login-email')||{}).value||'';
+  if(!em)return toast('Ingresa tu email primero',true);
+  auth.sendPasswordResetEmail(em).then(function(){toast('Email de recuperacion enviado');}).catch(function(e){toast(e.message,true);});
+}
+function togglePassVis(){
+  var i=document.getElementById('login-pass'); if(i)i.type=i.type==='password'?'text':'password';
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'){var lp=document.getElementById('login-page');if(lp&&lp.style.display!=='none')doLogin();}
+});
+function loadUsuarios(){
+  var list=document.getElementById('usuarios-list'); if(!list)return;
+  list.innerHTML='<p style="font-size:12px;color:var(--tx3)">Cargando...</p>';
+  db.collection('users').get().then(function(snap){
+    if(snap.empty){list.innerHTML='<p style="font-size:12px;color:var(--tx3)">Sin usuarios creados.</p>';return;}
+    list.innerHTML='';
+    snap.forEach(function(doc){
+      var u=doc.data();
+      var div=document.createElement('div'); div.className='list-item';
+      var nm=document.createElement('span'); nm.className='list-name';
+      nm.innerHTML='<strong>'+(u.nombre||u.email)+'</strong><br><span style="font-size:11px;color:var(--tx3)">'+u.email+' &mdash; <span style="color:'+(u.rol==='admin'?'var(--accent)':'var(--blue)')+'">'+( u.rol||'consultor')+'</span></span>';
+      div.appendChild(nm);
+      var del=document.createElement('button'); del.className='btn-del'; del.textContent='x';
+      del.onclick=(function(uid,nom){return function(){eliminarUsuario(uid,nom);};})(doc.id,u.nombre||u.email);
+      div.appendChild(del); list.appendChild(div);
+    });
+  }).catch(function(e){list.innerHTML='<p style="color:var(--danger);font-size:12px">'+e.message+'</p>';});
+}
+function crearUsuario(){
+  if(currentRole!=='superadmin'&&currentRole!=='admin')return toast('Sin permisos',true);
+  var em=(document.getElementById('nu-email')||{}).value.trim();
+  var pw=(document.getElementById('nu-pass')||{}).value.trim();
+  var nom=(document.getElementById('nu-nombre')||{}).value.trim();
+  var rol=(document.getElementById('nu-rol')||{}).value||'consultor';
+  if(!em||!pw)return toast('Email y contrasena obligatorios',true);
+  if(pw.length<8)return toast('Contrasena minimo 8 caracteres',true);
+  var secApp;
+  try{secApp=firebase.app('secondary');}catch(e){secApp=firebase.initializeApp(firebase.app().options,'secondary');}
+  firebase.auth(secApp).createUserWithEmailAndPassword(em,pw).then(function(cred){
+    return db.collection('users').doc(cred.user.uid).set({
+      email:em,nombre:nom||em,rol:rol,
+      creadoPor:currentUser.email,creadoEn:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function(){
+      firebase.auth(secApp).signOut();
+      toast('Usuario creado: '+em);
+      ['nu-email','nu-pass','nu-nombre'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+      document.getElementById('nu-rol').value='consultor';
+      loadUsuarios();
+      var msg='Acceso a Mis Finanzas Personales:\nURL: https://rlafratta.github.io/finanzas-app\nUsuario: '+em+'\nContrasena: '+pw+'\nRol: '+rol;
+      if(confirm('Usuario creado. Compartir por WhatsApp?'))window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+    });
+  }).catch(function(e){
+    var m=e.message;
+    if(e.code==='auth/email-already-in-use')m='Ese email ya tiene cuenta';
+    toast(m,true);
+  });
+}
+function eliminarUsuario(uid,nom){
+  if(currentRole!=='superadmin')return toast('Solo el superadmin puede eliminar usuarios',true);
+  if(!confirm('Eliminar '+nom+'?'))return;
+  db.collection('users').doc(uid).delete().then(function(){toast('Usuario eliminado');loadUsuarios();});
+}
+
+// ── BANK & INVESTMENT LINKS ─────────────────────────────────────
+var BANK_LINKS = {
+  'Efectivo':                  {web:'', ios:'', android:''},
+  'Banco de la Nacion Argentina': {web:'https://www.bna.com.ar/Personas', ios:'bnaargentina://', android:'ar.com.bna.bnaargentina'},
+  'Banco Macro':               {web:'https://www.macro.com.ar/bancadigital', ios:'macro://', android:'ar.com.macro.macro'},
+  'Banco Galicia':             {web:'https://www.galicia.ar/personas/banca-digital', ios:'galicia://', android:'ar.com.bancogalicia.galicia'},
+  'Banco Santander':           {web:'https://www.santander.com.ar/banco/online/personas', ios:'santander://', android:'ar.com.santander.rio'},
+  'Banco Hipotecario':         {web:'https://www.hipotecario.com.ar/homebanking', ios:'', android:''},
+  'Banco Credicoop':           {web:'https://www.bancocredicoop.coop/homebanking', ios:'', android:''},
+  'Banco BBVA':                {web:'https://www.bbva.com.ar/personas/servicios-digitales/banca-online.html', ios:'bbva://', android:'com.bbva.nxt.android'},
+  'Banco HSBC':                {web:'https://www.hsbc.com.ar/personas/banca-por-internet', ios:'hsbc://', android:'com.hsbc.hsbcargentina'},
+  'Banco ICBC':                {web:'https://homebanking.icbc.com.ar', ios:'', android:''},
+  'Banco Patagonia':           {web:'https://www.bancopatagonia.com.ar/HomeBankingNatural', ios:'', android:''},
+  'Banco Ciudad':              {web:'https://www.bancociudad.com.ar/institucional/homebanking', ios:'', android:''},
+  'Banco Provincia':           {web:'https://bpba.com.ar/homebanking', ios:'', android:''},
+  'Banco Supervielle':         {web:'https://www.supervielle.com.ar/homebanking', ios:'supervielle://', android:'ar.com.supervielle'},
+  'Banco Industrial':          {web:'https://www.bancoindustrial.com.ar/banca-digital', ios:'', android:''},
+  'Banco Comafi':              {web:'https://www.comafi.com.ar/homebanking', ios:'', android:''},
+  'Banco Meridian':            {web:'https://www.meridian.com.ar/homebanking', ios:'', android:''},
+  'Brubank':                   {web:'https://www.brubank.com.ar', ios:'brubank://', android:'ar.com.brubank'},
+  'Mercado Pago':              {web:'https://www.mercadopago.com.ar', ios:'mercadopago://', android:'com.mercadopago.android.px'},
+  'Ualá':                      {web:'https://www.uala.com.ar', ios:'uala://', android:'ar.com.uala.app'},
+  'Naranja X':                 {web:'https://www.naranjax.com', ios:'naranjax://', android:'com.naranjax'},
+  'Personal Pay':              {web:'https://www.personal.com.ar/servicios/personal-pay', ios:'', android:''},
+  'Cuenta DNI':                {web:'https://cuentadni.com.ar', ios:'', android:''},
+  'Prex':                      {web:'https://www.prexcard.com.ar', ios:'', android:''}
+};
+
+var IOL_LINKS = {
+  'IOL':            {web:'https://www.invertironline.com', ios:'invertironline://', android:'com.invertironline.iol'},
+  'Cocos Capital':  {web:'https://www.cocos.capital', ios:'cocos://', android:'capital.cocos.app'},
+  'Balanz':         {web:'https://balanz.com', ios:'balanz://', android:'com.balanz'},
+  'PPI':            {web:'https://ppi.com.ar', ios:'', android:''},
+  'Bull Market':    {web:'https://bullmarketbrokers.com', ios:'', android:''},
+  'Binance':        {web:'https://www.binance.com', ios:'binance://', android:'com.binance.dev'},
+  'Lemon Cash':     {web:'https://www.lemon.me', ios:'lemon://', android:'me.lemon.app'},
+  'Bitso':          {web:'https://bitso.com', ios:'bitso://', android:'com.bitso.wallet'},
+  'Ripio':          {web:'https://www.ripio.com', ios:'ripio://', android:'com.ripio'},
+  'Buenbit':        {web:'https://buenbit.com', ios:'buenbit://', android:'com.buenbit'}
+};
+
+function openBankLink(bankName) {
+  var info = BANK_LINKS[bankName];
+  if(!info||!info.web) return;
+  var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(isMobile) {
+    var isAndroid = /Android/i.test(navigator.userAgent);
+    var deepLink = isAndroid ? (info.android ? 'intent://'+info.android+'/#Intent;scheme='+info.android+';end' : null) : info.ios;
+    if(deepLink) {
+      // Try deep link, fall back to web after 2s
+      var fallbackTimer = setTimeout(function(){window.open(info.web,'_blank');}, 2000);
+      window.location.href = deepLink;
+      // Clear fallback if app opened (page will hide)
+      window.addEventListener('blur', function(){clearTimeout(fallbackTimer);}, {once:true});
+      return;
+    }
+  }
+  window.open(info.web, '_blank');
+}
+
+function openIOLLink(name, customUrl) {
+  var url = customUrl || (IOL_LINKS[name] && IOL_LINKS[name].web) || '';
+  if(!url) return;
+  var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(isMobile) {
+    var info = IOL_LINKS[name];
+    var isAndroid = /Android/i.test(navigator.userAgent);
+    var deepLink = info ? (isAndroid ? null : info.ios) : null;
+    if(deepLink) {
+      var fallbackTimer = setTimeout(function(){window.open(url,'_blank');}, 2000);
+      window.location.href = deepLink;
+      window.addEventListener('blur', function(){clearTimeout(fallbackTimer);}, {once:true});
+      return;
+    }
+  }
+  window.open(url, '_blank');
+}
+
+function cambiarContrasena() {
+  var p1=(document.getElementById('new-pass-1')||{}).value||'';
+  var p2=(document.getElementById('new-pass-2')||{}).value||'';
+  if(!p1||!p2)return toast('Ingresa la nueva contrasena',true);
+  if(p1!==p2)return toast('Las contrasenas no coinciden',true);
+  if(p1.length<8)return toast('Minimo 8 caracteres',true);
+  if(!currentUser)return toast('Debes estar logueado',true);
+  currentUser.updatePassword(p1).then(function(){
+    toast('Contrasena actualizada');
+    document.getElementById('new-pass-1').value='';
+    document.getElementById('new-pass-2').value='';
+  }).catch(function(e){
+    var msg=e.message;
+    if(e.code==='auth/requires-recent-login')msg='Cerrá sesion y volvé a ingresar antes de cambiar la contrasena';
+    toast(msg,true);
+  });
+}
 function exportData() {
   var blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   var url=URL.createObjectURL(blob);
@@ -3853,7 +4582,7 @@ function toast(msg, err) {
 // ============================================================
 // OFFLINE
 // ============================================================
-window.addEventListener('online',function(){document.getElementById('offline-banner').style.display='none';setSyncUI('syncing','Reconectando...');});
+window.addEventListener('online',function(){document.getElementById('offline-banner').style.display='none';setSyncUI('ok','En linea');});
 window.addEventListener('offline',function(){document.getElementById('offline-banner').style.display='block';setSyncUI('error','Sin conexion');});
 if(!navigator.onLine)document.getElementById('offline-banner').style.display='block';
 
@@ -3876,10 +4605,34 @@ try {
 }
 
 
+document.getElementById('offline-banner').style.display='none';setSyncUI('syncing','Reconectando...');
+window.addEventListener('offline',function(){document.getElementById('offline-banner').style.display='block';setSyncUI('error','Sin conexion');});
+if(!navigator.onLine)document.getElementById('offline-banner').style.display='block';
+
+// ============================================================
+// INIT
+// ============================================================
+try {
+  initFirebase();
+  loadAll();
+} catch(e) {
+  console.error('Firebase init failed:', e);
+  setSyncUI('error', 'Firebase no disponible - modo sin conexion');
+  // Start app without Firebase
+  setTimeout(function(){
+    var ld = document.getElementById('loading');
+    if(ld) { ld.classList.add('hidden'); ld.style.display='none'; }
+    updateSBEj();
+    safeRenderBalance();
+  }, 100);
+}
+
+
+
+
 </script>
 
 <script>
-
 if('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('/sw.js').then(function(reg) {
@@ -3889,6 +4642,6 @@ if('serviceWorker' in navigator) {
     });
   });
 }
-
+</script>
 </body>
 </html>
