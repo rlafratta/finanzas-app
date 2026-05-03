@@ -1055,6 +1055,9 @@ function pagoInUse(name) {
 }
 
 function loanSaldo(loan) {
+  // Start from apertura balance if it exists
+  var aper = getAper();
+  var aperSaldo = aper['loan_'+loan.id] || 0;
   var allRecs = [];
   var keys = Object.keys(S.records||{});
   for (var i = 0; i < keys.length; i++) {
@@ -1067,7 +1070,8 @@ function loanSaldo(loan) {
     if (r.cat === 'loan_received') recv += (r.importe||0);
     if (r.cat === 'loan_repay') paid += (r.importe||0);
   });
-  return recv - paid;
+  // aperSaldo is the initial outstanding balance; add new loans, subtract payments
+  return aperSaldo + recv - paid;
 }
 
 function computeSaldos(recs, aper) {
@@ -1096,10 +1100,13 @@ function computeSaldos(recs, aper) {
     if (r.inv && r.investEffect) inv[r.inv] = (inv[r.inv]||0) + (r.investEffect * imp);
     // bienes
     if (r.bienKey) bienes[r.bienKey] = (bienes[r.bienKey]||0) + imp;
-    // loans
+    // loans - initialize from apertura
     if (r.loanId) {
       var lid = String(r.loanId);
-      if (!ls[lid]) ls[lid] = 0;
+      if (!ls[lid]) {
+        // Start from apertura saldo
+        ls[lid] = aper['loan_'+lid] || 0;
+      }
       if (r.cat === 'loan_received') ls[lid] += imp;
       else if (r.cat === 'loan_repay') ls[lid] -= imp;
     }
@@ -1114,6 +1121,13 @@ function computeSaldos(recs, aper) {
       usdEfectivoUSD+=r.fxUSD; usdEfectivoPesos+=r.importe;
     } else if(cl.indexOf('venta de dolares')>=0||cl.indexOf('venta de dólares')>=0){
       usdEfectivoUSD-=r.fxUSD; usdEfectivoPesos-=r.importe;
+    }
+  });
+  // Add loans that have apertura balance but no movements
+  (S.loans||[]).forEach(function(loan){
+    var lid = String(loan.id);
+    if(!ls[lid] && aper['loan_'+lid]) {
+      ls[lid] = aper['loan_'+lid];
     }
   });
   return {bancos:bancos, inversiones:inv, bienes:bienes, loanSaldos:ls,
