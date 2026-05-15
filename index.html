@@ -724,7 +724,7 @@ function fbSubscribe(ejId) {
     S.records[ejId] = r;
     setSyncUI('online','En linea');
     var pgReg=document.getElementById('pg-registros'); if (pgReg&&pgReg.classList.contains('on')) renderRecs();
-    if (document.getElementById('pg-balance').classList.contains('on')) safeRenderBalance();
+    if ((document.getElementById('pg-balance')||{classList:{contains:function(){return false;}}}).classList.contains('on')) safeRenderBalance();
   }, function(e){setSyncUI('error','Error sync');console.error(e);});
 }
 
