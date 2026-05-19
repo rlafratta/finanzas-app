@@ -2483,8 +2483,8 @@ function safeRenderBalance() {
     if (balView === 'res') { renderResultados(); return; }
     renderBalMain();
   } catch(e) {
-    console.error('renderBalance:', e);
-    bc.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--tx3)"><p style="margin-bottom:8px">Error: '+e.message+'</p><button class="btn btn-prim" onclick="nav(&apos;ejercicios&apos;)" style="margin-top:12px">Ir a Ejercicios</button></div>';
+    console.error('renderBalance error:', e.message, e.stack);
+    bc.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--tx3)"><p style="margin-bottom:8px;color:#f87171">Error al renderizar: '+e.message+'</p><p style="font-size:11px;color:var(--tx3)">Revisa la consola del navegador (F12)</p><button class="btn btn-prim" onclick="safeRenderBalance()" style="margin-top:12px">Reintentar</button></div>';
   }
   var ej = (S.ejercicios||[]).filter(function(e){return e.id===S.activeEj;})[0];
   var sub = document.getElementById('bal-ej-lbl'); if(sub)sub.textContent=ej?'Ejercicio '+ej.year:'--';
