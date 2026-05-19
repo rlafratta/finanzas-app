@@ -353,14 +353,10 @@ td:first-child{text-align:left;color:var(--tx);font-weight:500}
   <!-- PAGES -->
   <div id="pages">
 
-    <!-- INFORMES -->
+    <!-- INFORMES - redirects to balance -->
     <div class="pg" id="pg-informes">
-      <div class="pg-head"><h1>Informes</h1><p>Estado de situacion patrimonial y resultados</p></div>
-      <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--b1);padding-bottom:12px">
-        <button class="btn" id="bal-tab-balance" onclick="setBalTab('balance')" style="border-radius:100px;padding:6px 18px;font-size:12px">&#9878; Balance</button>
-        <button class="btn" id="bal-tab-resultados" onclick="setBalTab('resultados')" style="border-radius:100px;padding:6px 18px;font-size:12px">&#128200; Resultados</button>
-      </div>
-      <div id="inf-content"><div id="inf-bal-content"></div></div>
+      <div class="pg-head"><h1>Informes</h1></div>
+      <div id="inf-content"></div>
     </div>
 
     <!-- BALANCE -->
@@ -837,6 +833,23 @@ td:first-child{text-align:left;color:var(--tx);font-weight:500}
 
 <script>
 
+var S = {
+  ejercicios:[], activeEj:null, records:{}, apertura:{},
+  loans:[], customConcepts:[], customPagos:[], tarjetas:[],
+  tcGastos:[],
+  baseConcepts:{}, basePagos:[], customIOLTypes:[],
+  rodados:[], inmuebles:[], fciItems:[], iolItems:[]
+};
+var balView = 'bal';
+var selPago = '';
+var mesFil = '';
+var unsubRec = null;
+var unsubLoans = null;
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+var TR = 'Extracciones y Transferen
 var S = {
   ejercicios:[], activeEj:null, records:{}, apertura:{},
   loans:[], customConcepts:[], customPagos:[], tarjetas:[],
@@ -1357,9 +1370,7 @@ function nav(page, btn) {
     var pgEl = document.getElementById('pg-'+page);
     if (!pgEl) { console.warn('Page not found:',page); return; }
     pgEl.classList.add('on');
-    var titles = {carga:'Nueva Carga',apertura:'Saldos Iniciales',registros:'Registros',procesos:'Procesos Mensuales',
-      balance:'Balance','prestamos':'Prestamos','ejercicios':'Ejercicios',
-      'conceptos':'Conceptos','pagos':'Formas de Pago','tarjetas':'Tarjetas','datos':'Configuracion','procesos':'Procesos Mensuales'};
+    var titles = {carga:'Nueva Carga',apertura:'Saldos Iniciales',registros:'Registros',procesos:'Procesos Mensuales',balance:'Balance',informes:'Informes',prestamos:'Prestamos',ejercicios:'Ejercicios',conceptos:'Conceptos',pagos:'Formas de Pago',tarjetas:'Tarjetas',datos:'Configuracion',tc:'Tarjetas de Credito'};
     var tb = document.getElementById('page-title');
     if (tb) tb.textContent = titles[page] || page;
     var nb = btn || document.querySelector('.ni[data-p="'+page+'"]');
@@ -1369,13 +1380,14 @@ function nav(page, btn) {
     else if (page === 'apertura') try{initAper();}catch(e){console.error(e);}
     else if (page === 'registros') try{renderRecs();}catch(e){console.error(e);}
     else if (page === 'balance') { safeRenderBalance(); setBalTab(_balTab||'balance'); }
+    else if (page === 'informes') { nav('balance'); return; }
     else if (page === 'tc') { showTCTab(_tcTab||'gastos'); }
     else if (page === 'prestamos') try{renderLoans();}catch(e){console.error(e);}
     else if (page === 'ejercicios') try{renderEjs();}catch(e){console.error(e);}
     else if (page === 'procesos') try{initProcesos();}catch(e){console.error(e);}
     else if (page === 'conceptos') try{renderConcepts();}catch(e){console.error(e);}
     else if (page === 'pagos') try{renderPagos();}catch(e){console.error(e);}
-    else if (page === 'tarjetas') try{renderTC();}catch(e){console.error(e);}
+    else if (page === 'tarjetas') try{renderTarjetas();}catch(e){console.error(e);}
     var ct = document.getElementById('pages');
     if (ct) ct.scrollTop = 0;
   } catch(e) { console.error('nav:', e); }
@@ -2472,6 +2484,8 @@ function delRec(id) {
 // BALANCE
 // ============================================================
 function safeRenderBalance() {
+  var activePg = document.querySelector('.pg.on');
+  var activePgId = activePg ? activePg.id : '';
   var bc = document.getElementById('bal-content');
   if (!bc) return;
   if (!S.activeEj) {
@@ -3462,7 +3476,7 @@ function drillBienes(tipo) {
 }
 
 function drillBanco(banco) {
-  var bc = document.getElementById('inf-bal-content') || document.getElementById('bal-content');
+  var bc = document.getElementById('bal-content');
   if(!bc) return;
   var recs = activeRecs();
   var aper = getAper();
@@ -5793,25 +5807,7 @@ try {
     updateSBEj();
     safeRenderBalance();
   }, 100);
-}</script>
-
-<script>
-if('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js');
-  });
-}
-</script>
-
-<!-- Hidden elements required by JS -->
-<div id="modal-ej-id" style="display:none"></div>
-<input type="hidden" id="modal-ej-title">
-<input type="hidden" id="ej-year-inp">
-<input type="hidden" id="ej-desc-inp">
-<input type="hidden" id="fci-fondo-hidden">
-<div id="dc-mes" style="display:none"></div>
-<div id="dc-tc" style="display:none"></div>
-<div id="me-res-display" style="display:none"></div>
+}-display" style="display:none"></div>
 <div id="me-dir-label" style="display:none"></div>
 <div id="multi-pago-diff" style="font-size:12px;color:var(--tx3);margin-top:6px"></div>
 <div id="login-page" style="display:none"></div>
