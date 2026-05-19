@@ -2176,6 +2176,7 @@ function calcAperBancoUSD(bancoOrEl) {
 }
 function updateAperVal() {
   var tA=0, tP=0;
+  var data = (S.apertura && S.activeEj) ? (S.apertura[S.activeEj] || {}) : {};
   allPNames().forEach(function(b){var e=document.getElementById('ab-'+b.replace(/[^a-zA-Z0-9]/g,'_'));if(e)tA+=parseFloat(e.value)||0;});
   // ME
   CURRENCIES.forEach(function(cur){var q=parseFloat((document.getElementById('ame-qty-'+cur)||{}).value)||0;var t=parseFloat((document.getElementById('ame-tc-'+cur)||{}).value)||0;if(q&&t)tA+=q*t;});
@@ -5792,14 +5793,7 @@ try {
     updateSBEj();
     safeRenderBalance();
   }, 100);
-}
-getElementById('loading');
-    if(ld) { ld.classList.add('hidden'); ld.style.display='none'; }
-    updateSBEj();
-    safeRenderBalance();
-  }, 100);
-}
-</script>
+}</script>
 
 <script>
 if('serviceWorker' in navigator) {
