@@ -1369,8 +1369,8 @@ function nav(page, btn) {
 }
 
 function openSB() {
-  document.getElementById('sidebar').classList.add('open');
-  document.getElementById('overlay').classList.add('on');
+  (document.getElementById('sidebar')||{classList:{add:function(){},remove:function(){},contains:function(){return false;},toggle:function(){}}}).classList.add('open');
+  (document.getElementById('overlay')||{classList:{add:function(){},remove:function(){},contains:function(){return false;},toggle:function(){}}}).classList.add('on');
 }
 function closeSB() {
   var sb = document.getElementById('sidebar');
@@ -1378,8 +1378,8 @@ function closeSB() {
   if (sb) sb.classList.remove('open');
   if (ov) ov.classList.remove('on');
 }
-function closeMod(id) { document.getElementById(id).classList.remove('on'); }
-function openMod(id) { document.getElementById(id).classList.add('on'); }
+function closeMod(id) { var el=document.getElementById(id); if(el) el.classList.remove('on'); }
+function openMod(id) { var el=document.getElementById(id); if(el) el.classList.add('on'); }
 
 // ============================================================
 // CUSTOM SELECT
