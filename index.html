@@ -280,7 +280,19 @@ td:first-child{text-align:left;color:var(--tx);font-weight:500}
 #page-title{font-family:var(--hf);font-size:15px;font-weight:700;flex:1}
 #sb-toggle{background:none;border:none;color:var(--tx2);cursor:pointer;font-size:18px;padding:4px}
 @media(min-width:700px){#sb-toggle{display:none}}
+
+/* SHELL LAYOUT FIX */
+#shell { display:flex; flex-direction:column; height:100dvh; transition:margin-left .25s; }
+@media(min-width:700px) { 
+  body { display:flex; } 
+  #sidebar { position:relative; left:0; }
+  #shell { flex:1; }
+}
+#pages { flex:1; overflow-y:auto; padding:16px; display:block; }
+.pg { display:none; }
+.pg.on { display:block; }
 </style>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
 </head>
 
 <body>
@@ -352,7 +364,7 @@ td:first-child{text-align:left;color:var(--tx);font-weight:500}
     </div>
 
     <!-- BALANCE -->
-    <div class="pg on" id="pg-balance">
+    <div class="pg on" id="pg-balance" class="pg on">
       <div class="pg-head">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
           <h1 style="margin:0">Balance</h1>
@@ -1327,6 +1339,7 @@ function startApp() {
     if (ld) { ld.classList.add('hidden'); ld.style.display='none'; }
   } catch(e) {}
   updateSBEj();
+  nav('balance'); // activate balance page
   fbSubscribe(S.activeEj);
   safeRenderBalance();
 }
@@ -5775,6 +5788,12 @@ try {
   setSyncUI('error', 'Firebase no disponible - modo sin conexion');
   setTimeout(function(){
     var ld = document.getElementById('loading');
+    if(ld) { ld.classList.add('hidden'); ld.style.display='none'; }
+    updateSBEj();
+    safeRenderBalance();
+  }, 100);
+}
+getElementById('loading');
     if(ld) { ld.classList.add('hidden'); ld.style.display='none'; }
     updateSBEj();
     safeRenderBalance();
