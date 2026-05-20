@@ -317,12 +317,12 @@ td:first-child{text-align:left;color:var(--tx);font-weight:500}
   </div>
   <div class="sb-ej-pill">
     <div class="sb-ej-lbl">EJERCICIO ACTIVO</div>
-    <div class="sb-ej-val" id="sb-ej-yr">--</div>
-    <button class="sb-ej-arrow" onclick="nav('ejercicios',this)">&#9658;</button>
+    <div class="sb-ej-val" id="sb-ej-yr" onclick="nav('balance')" style="cursor:pointer" title="Ver balance">--</div>
+    <button class="sb-ej-arrow" onclick="nav('ejercicios',this)" title="Gestionar ejercicios">&#9658;</button>
   </div>
   <div class="sb-nav" id="sb-nav">
     <div class="sb-grp">Informes</div>
-    <button class="ni" data-p="informes" onclick="nav('informes',this)"><span class="ni-ico">&#128202;</span>Informes</button>
+    <button class="ni" data-p="informes" onclick="nav('balance',this)"><span class="ni-ico">&#128202;</span>Informes</button>
     <div class="sb-grp">Operaciones</div>
     <button class="ni" data-p="carga" onclick="nav('carga',this)"><span class="ni-ico">+</span>Nueva Carga</button>
     <button class="ni" data-p="apertura" onclick="nav('apertura',this)"><span class="ni-ico">&#128274;</span>Saldos Iniciales</button>
