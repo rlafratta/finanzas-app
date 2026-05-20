@@ -406,12 +406,9 @@ td:first-child{text-align:left;color:var(--tx);font-weight:500}
       <div class="card">
         <div class="card-hd">CONCEPTO Y PERIODO</div>
         <div class="field"><label>CONCEPTO *</label>
-          <div class="cs-wrap" id="cs-concepto">
-            <div class="cs-sel" id="cs-concepto-sel" onclick="buildCS('cs-concepto')">
-              <span id="cs-concepto-txt">Selecciona un concepto...</span><span class="cs-arr">&#9660;</span>
-            </div>
-            <div class="cs-drop" id="cs-concepto-drop" style="display:none"></div>
-          </div>
+          <select id="sel-concepto" class="inp" onchange="onConceptoSel(this.value)" style="width:100%">
+            <option value="">-- Selecciona un concepto --</option>
+          </select>
         </div>
         <div id="cat-display" style="display:none;align-items:center;gap:8px;margin-bottom:8px">
           <span class="pill on" id="cat-badge"></span>
@@ -834,7 +831,6 @@ setTimeout(function(){var ld=document.getElementById('loading');if(ld&&!ld.class
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-
 var S = {
   ejercicios:[], activeEj:null, records:{}, apertura:{},
   loans:[], customConcepts:[], customPagos:[], tarjetas:[],
@@ -1362,7 +1358,17 @@ function nav(page, btn) {
     var nb = btn || document.querySelector('.ni[data-p="'+page+'"]');
     if (nb) nb.classList.add('on');
     closeSB();
-    if (page === 'carga') try{initCarga();}catch(e){console.error(e);}
+    if (page === 'carga') {
+      try{initCarga();}catch(e){console.error(e);}
+      setTimeout(function(){
+        var csel=document.getElementById('sel-concepto');
+        if(csel && csel.options.length<=1){
+          var opts='<option value="">-- Selecciona un concepto --</option>';
+          allConcepts().forEach(function(c){opts+='<option value="'+c.name+'">'+c.name+'</option>';});
+          csel.innerHTML=opts;
+        }
+      },100);
+    }
     else if (page === 'apertura') try{initAper();}catch(e){console.error(e);}
     else if (page === 'registros') try{renderRecs();}catch(e){console.error(e);}
     else if (page === 'balance') { safeRenderBalance(); setBalTab(_balTab||'balance'); }
@@ -1504,7 +1510,9 @@ function initCarga() {
   var csd = document.getElementById('cs-concepto-drop');
   if(csd){csd.textContent='Selecciona un concepto...';csd.classList.remove('has');}
   var cv = document.getElementById('cs-concepto-txt');
-  if(cv) cv.value = '';
+  if(cv) cv.textContent = 'Selecciona un concepto...';
+  var cselEl = document.getElementById('sel-concepto');
+  if(cselEl) cselEl.value = '';
   var catd = document.getElementById('cat-display');
   if(catd) catd.style.display = 'none';
   buildCS('concepto', allConcepts, onConceptSel, true);
@@ -1535,6 +1543,12 @@ function fillLoanSels() {
   }
 }
 
+function onConceptoSel(name) {
+  if(!name) return;
+  // Update hidden state
+  window._selectedConcepto = name;
+  onConceptSel(name);
+}
 function onConceptSel(name) {
   // Auto-show FCI panel for acreditacion/rescate FCI
   var nameLower = (name||'').toLowerCase();
@@ -1684,7 +1698,7 @@ function guardar() {
   if (!S.activeEj) return toast('Primero crea un ejercicio', true);
   var _ej=(S.ejercicios||[]).filter(function(e){return e.id===S.activeEj;})[0];
   if(_ej&&_ej.closed) return toast('El ejercicio esta cerrado. Abrilo para cargar movimientos.', true);
-  var concepto = (document.getElementById('cs-concepto-txt')||{}).value||'';
+  var _sc=document.getElementById('sel-concepto'); var concepto=(_sc&&_sc.value)?_sc.value.trim():((document.getElementById('cs-concepto-txt')||{}).textContent||'').trim();
   var mes = (document.getElementById('sel-mes')||{}).value||'';
   var importe = parseFloat((document.getElementById('inp-imp')||{}).value)||0;
   var obs = (document.getElementById('inp-obs')||{}).value||'';
@@ -2172,6 +2186,9 @@ function calcAperBancoUSD(bancoOrEl) {
   updateAperVal();
 }
 function updateAperVal() {
+  if(!S.apertura) S.apertura={};
+  if(!S.apertura[S.activeEj]) S.apertura[S.activeEj]={};
+  var data = S.apertura[S.activeEj];
   var tA=0, tP=0;
   allPNames().forEach(function(b){var e=document.getElementById('ab-'+b.replace(/[^a-zA-Z0-9]/g,'_'));if(e)tA+=parseFloat(e.value)||0;});
   // ME
@@ -5799,11 +5816,7 @@ try {
   }, 100);
 }
 </script>
-
-<!-- Hidden elements required by JS -->
-<div id="me-res-display" style="display:none"></div>
-<div id="me-dir-label" style="display:none"></div>
-<input type="hidden" id="modal-ej-id">
+den" id="modal-ej-id">
 <input type="hidden" id="modal-ej-title">
 <input type="hidden" id="ej-year-inp">
 <input type="hidden" id="ej-desc-inp">
