@@ -1324,8 +1324,8 @@ function startApp() {
     if (ld) { ld.classList.add('hidden'); ld.style.display='none'; }
   } catch(e) {}
   updateSBEj();
+  nav('balance');
   fbSubscribe(S.activeEj);
-  safeRenderBalance();
 }
 function isReadOnly(){return currentRole==='consultor';}
 
